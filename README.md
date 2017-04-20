@@ -1,6 +1,6 @@
-# Neural Message Passing for Computer Vision
+# Neural Message Passing for Quantum Chemistry
 
-Deep learning approach for graph based data.
+Implementation of Neural Message Passing as proposed by Justin Gilmer *et al.* in [1].
 
 ## Installation
 
@@ -17,7 +17,7 @@ Deep learning approach for graph based data.
 
 ## Bibliography
 
-* [Neural Message Passing for Quantum Chemistry](https://arxiv.org/pdf/1704.01212.pdf)
+- [1] [Neural Message Passing for Quantum Chemistry](https://arxiv.org/pdf/1704.01212.pdf)
 
 ## Authors
 
