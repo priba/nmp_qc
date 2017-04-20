@@ -11,33 +11,47 @@ __email__ = "priba@cvc.uab.cat, adutta@cvc.uab.cat"
 import argparse
 import os
 import wget
-
+import zipfile
+import tarfile
 
 # Download data from url
-def download_figshare(url, dir_path):
-    url = 'https://api.figshare.com/v2/{endpoint}'
-
+def download_figshare(file_name, file_ext, dir_path='./'):
+    prepare_data_dir(dir_path)
+    url = 'https://ndownloader.figshare.com/files/' + file_name
+    wget.download(url, out=dir_path)
+    if file_ext == '.zip':
+        zip_path = os.path.join(dir_path, file_name)
+        zip_ref = zipfile.ZipFile(zip_path,'r')
+        zip_ref.extractall(dir_path)
+        zip_ref.close()
+        os.remove(zip_path)
+    elif file_ext == '.tar.bz2':
+        tar_path = os.path.join(dir_path, file_name)
+        tar_ref = tarfile.open(tar_path,'r:bz2')
+        tar_ref.extractall(dir_path)
+        os.remove(tar_path)
 
 # Download QM9 dataset
 def download_qm9(data_dir):
-    if os.path.exists(os.path.join(data_dir, 'qm9')):
+    data_dir = os.path.join(data_dir, 'qm9')
+    if os.path.exists(data_dir):
         print('Found QM9 dataset - SKIP!')
         return
     
-    url = 'https://ndownloader.figshare.com/files/'
+    prepare_data_dir(data_dir)
 
     # README
-    download_data(url + '3195392', data_dir)
+    download_figshare('3195392', '.txt', data_dir)
     # atomref
-    download_data(url + '3195395', data_dir)
+    download_figshare('3195395', '.txt', data_dir)
     # Validation
-    download_data(url + '3195401', data_dir)
+    download_figshare('3195401', '.txt', data_dir)
     # Uncharacterized
-    download_data(url + '3195404', data_dir)
+    download_figshare('3195404', '.txt', data_dir)
     # dsgdb9nsd.xyz.tar.bz2
-    download_data(url + '3195398', data_dir)
+    download_figshare('3195398', '.tar.bz2', data_dir)
     # dsC7O2H10nsd.xyz.tar.bz2
-    download_data(url + '3195389', data_dir)
+    download_figshare('3195389', '.tar.bz2', data_dir)
 
 # Download MUTAG and ENZYMES
 def download_mutag_enzymes():
@@ -53,17 +67,19 @@ if __name__ == '__main__':
     # Parse optios for downloading
     parser = argparse.ArgumentParser(description='Download dataset for Message Passing Algorithm.')
     # Positional arguments
-    parser.add_argument('datasets', metavar='D', type=str.lower, nargs='+', choices=['qm9'],
-                            help='Name of dataset to download [QM9]')
+    parser.add_argument('datasets', metavar='D', type=str.lower, nargs='+', choices=['qm9','mutag',
+                        'enzymes'], help='Name of dataset to download [QM9,MUTAG,ENZYMES]')
     # I/O
     parser.add_argument('-p', '--path', metavar='dir', type=str, nargs=1,
-                            help='path to store the data (default ./)')
+                        help='path to store the data (default ./)')
 
     args = parser.parse_args()
 
     # Check parameters
     if args.path is None:
         args.path = './'
+    else:
+        args.path = args.path[0]
 
     # Init folder
     prepare_data_dir(args.path)
@@ -72,7 +88,6 @@ if __name__ == '__main__':
     if 'qm9' in args.datasets:
         download_qm9(args.path)
     if 'mutag' in args.datasets:
-        download_mutag(args.path)
+        download_figshare('3132449', '.zip', args.path)
     if 'enzymes' in args.datasets:
-        download_enzymes(args.path)
-
+        download_figshare('3132446', '.zip', args.path)

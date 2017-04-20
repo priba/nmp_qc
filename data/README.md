@@ -10,8 +10,8 @@ Download the datasets.
 
 - [ ] Figshare downloader.
 - [ ] QM9.
-- [ ] MUTAG.
-- [ ] ENZYMES.
+- [x] MUTAG.
+- [x] ENZYMES.
 
 ## Authors
 
