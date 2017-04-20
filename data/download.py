@@ -63,9 +63,9 @@ def download_qm9(data_dir):
     # Uncharacterized
     download_figshare('3195404', '.txt', data_dir, 'uncharacterized.txt')
     # dsgdb9nsd.xyz.tar.bz2
-    download_figshare('3195398', '.tar.bz2', data_dir, 'dsgdb9nsd')
+    download_figshare('3195389', '.tar.bz2', data_dir, 'dsgdb9nsd')
     # dsC7O2H10nsd.xyz.tar.bz2
-    download_figshare('3195389', '.tar.bz2', data_dir, 'dsC702H10nsd')
+    download_figshare('3195398', '.tar.bz2', data_dir, 'dsC702H10nsd')
 
 # If not exists creates the specified folder
 def prepare_data_dir(path):
