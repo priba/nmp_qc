@@ -9,6 +9,7 @@ Implementation of Neural Message Passing as proposed by Justin Gilmer *et al.* i
 
 ## TODO
 
+- [ ] Data downloader.
 - [ ] Main code structure.
 - [ ] Graph Loader: Graph reader for the common datasets.
 - [ ] Message function: Reproduce message functions for the state of the art papers.
