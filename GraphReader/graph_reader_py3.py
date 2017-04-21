@@ -2,10 +2,10 @@
 """
 Created on Thu Apr 20 15:28:34 2017
 
+"""
+
 __author__ = "Pau Riba, Anjan Dutta"
 __email__ = "priba@cvc.uab.cat, adutta@cvc.uab.cat"
-
-"""
 
 import numpy as np
 import networkx as nx
@@ -58,6 +58,9 @@ def load_dataset(directory, dataset, subdir_gwhist = '01_Keypoint' ):
         test_classes, test_files = read_2cols_set_files(join(directory,'Set/Test.txt'))
         valid_classes, valid_files = read_2cols_set_files(join(directory,'Set/Valid.txt'))
         
+        train_classes, valid_classes, test_classes = \
+             create_numeric_classes(train_classes, valid_classes, test_classes)
+        
         data_dir = join(directory, 'Data/Word_Graphs/01_Skew', subdir_gwhist)
         
         train_graphs = load_gwhist(data_dir, train_files)
@@ -67,18 +70,36 @@ def load_dataset(directory, dataset, subdir_gwhist = '01_Keypoint' ):
     return train_graphs, train_classes, valid_graphs, valid_classes, test_graphs, test_classes
 
 def create_numeric_classes(train_classes, valid_classes, test_classes):
+    
     classes = train_classes + valid_classes + test_classes
-    uc = sorted(list(set(classes))) #TODO    
+    uniq_classes = sorted(list(set(classes)))
+    train_classes_ = [0] * len(train_classes)
+    valid_classes_ = [0] * len(valid_classes)
+    test_classes_ = [0] * len(test_classes)
+    for ix in range(len(uniq_classes)):
+        idx = [i for i, c in enumerate(train_classes) if c == uniq_classes[ix]]
+        for i in idx:
+            train_classes_[i] = ix + 1
+        idx = [i for i, c in enumerate(valid_classes) if c == uniq_classes[ix]]
+        for i in idx:
+            valid_classes_[i] = ix + 1
+        idx = [i for i, c in enumerate(test_classes) if c == uniq_classes[ix]]
+        for i in idx:
+            test_classes_[i] = ix + 1
+
+    return train_classes_, valid_classes_, test_classes_        
     
 def load_gwhist(data_dir, files):
+    
     graphs = []
     for i in range(len(files)):
         g = create_graph_gwhist(join(data_dir, files[i]))
         graphs += [g]
-        
+ 
     return graphs    
     
 def read_2cols_set_files(file):
+    
     f = open(file, 'r')
     lines = f.read().splitlines()
     classes = []
@@ -87,6 +108,7 @@ def read_2cols_set_files(file):
         c, f = line.split(' ')[:2]
         classes += [c]
         files += [f + '.gxl']
+
     return classes, files
     
 def divide_datasets(graphs, classes):
@@ -197,7 +219,7 @@ def create_graph_gwhist(file):
     
 if __name__ == '__main__':
     
-    directory = '/home/adutta/Workspace/Datasets/Graphs'
+    directory = '/home/anjan/Workspace/Datasets/Graphs'
     
     dataset = 'enzymes'
     print(dataset)
@@ -209,7 +231,7 @@ if __name__ == '__main__':
     train_graphs, train_classes, valid_graphs, valid_classes, test_graphs, test_classes = load_dataset(directory, dataset)
     print(len(train_graphs), len(valid_graphs), len(test_graphs))
     
-    directory = '/home/adutta/Workspace/Datasets/GWHistoGraphs'
+    directory = '/home/anjan/Workspace/Datasets/Graphs/GWHistoGraphs'
     dataset = 'gwhist'
     
     subdir_gwhist = '01_Keypoint'
@@ -241,8 +263,3 @@ if __name__ == '__main__':
     print(subdir_gwhist)
     train_graphs, train_classes, valid_graphs, valid_classes, test_graphs, test_classes = load_dataset(directory, dataset, subdir_gwhist)
     print(len(train_graphs), len(valid_graphs), len(test_graphs))
-    
-    
-    
-    
-    
