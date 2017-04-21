@@ -7,57 +7,109 @@ __email__ = "priba@cvc.uab.cat, adutta@cvc.uab.cat"
 
 """
 
-#import deepchem as dc
-from rdkit import Chem, DataStructs
-from rdkit.Chem import AllChem
-
-import torch
-import torch.nn as nn
-from torch.autograd import Variable
-import torch.optim as optim
-import torch.nn.functional as F
-
-from sklearn.metrics import r2_score
-from sklearn.ensemble import RandomForestRegressor
 import numpy as np
 import networkx as nx
-
 import random
 
-import os
 from os import listdir
 from os.path import isfile, join
 
-
+import xml.etree.ElementTree as ET
 
 random.seed(2)
-torch.manual_seed(2)
 np.random.seed(2)
 
-T = 4
-BATCH_SIZE = 64
-MAXITER = 2000
-
-def load_dataset(directory, dataset):
+def load_dataset(directory, dataset, subdir_gwhist = '01_Keypoint' ):    
     
-    file_path = join(directory, dataset)        
-    files = [f for f in listdir(file_path) if isfile(join(file_path, f))]    
-    
-    classes = []
-    graphs = []
-    
-    if dataset == 'enzymes':    
+    if dataset == 'enzymes':
+        
+        file_path = join(directory, dataset)        
+        files = [f for f in listdir(file_path) if isfile(join(file_path, f))]
+        
+        classes = []
+        graphs = []
+        
         for i in range(len(files)):
             g, c = create_graph_enzymes(join(directory, dataset, files[i]))
             graphs += [g]
             classes += [c]
+            
+        train_graphs, train_classes, valid_graphs, valid_classes, test_graphs, test_classes = divide_datasets(graphs, classes)
+            
     elif dataset == 'mutag':
+        
+        file_path = join(directory, dataset)        
+        files = [f for f in listdir(file_path) if isfile(join(file_path, f))]
+        
+        classes = []
+        graphs = []
+        
         for i in range(len(files)):
             g, c = create_graph_mutag(join(directory, dataset, files[i]))
             graphs += [g]
             classes += [c]
+            
+        train_graphs, train_classes, valid_graphs, valid_classes, test_graphs, test_classes = divide_datasets(graphs, classes)
+            
+    elif dataset == 'gwhist':
         
-    return graphs, classes
+#        directory = '/home/adutta/Workspace/Datasets/GWHistoGraphs'                
+        train_classes, train_files = read_2cols_set_files(join(directory,'Set/Train.txt'))
+        test_classes, test_files = read_2cols_set_files(join(directory,'Set/Test.txt'))
+        valid_classes, valid_files = read_2cols_set_files(join(directory,'Set/Valid.txt'))
+        
+        data_dir = join(directory, 'Data/Word_Graphs/01_Skew', subdir_gwhist)
+        
+        train_graphs = load_gwhist(data_dir, train_files)
+        valid_graphs = load_gwhist(data_dir, valid_files)
+        test_graphs = load_gwhist(data_dir, test_files)
+        
+    return train_graphs, train_classes, valid_graphs, valid_classes, test_graphs, test_classes
+
+def create_numeric_classes(train_classes, valid_classes, test_classes):
+    classes = train_classes + valid_classes + test_classes
+    uc = sorted(list(set(classes))) #TODO    
+    
+def load_gwhist(data_dir, files):
+    graphs = []
+    for i in range(len(files)):
+        g = create_graph_gwhist(join(data_dir, files[i]))
+        graphs += [g]
+        
+    return graphs    
+    
+def read_2cols_set_files(file):
+    f = open(file, 'r')
+    lines = f.read().splitlines()
+    classes = []
+    files = []
+    for line in lines:        
+        c, f = line.split(' ')[:2]
+        classes += [c]
+        files += [f + '.gxl']
+    return classes, files
+    
+def divide_datasets(graphs, classes):
+    
+    uc = list(set(classes))
+    tr_idx = []
+    va_idx = []
+    te_idx = []
+    
+    for c in uc:
+        idx = [i for i, x in enumerate(classes) if x == c]
+        tr_idx += sorted(np.random.choice(idx, int(0.8*len(idx)), replace=False))
+        va_idx += sorted(np.random.choice([x for x in idx if x not in tr_idx], int(0.1*len(idx)), replace=False))
+        te_idx += sorted(np.random.choice([x for x in idx if x not in tr_idx and x not in va_idx], int(0.1*len(idx)), replace=False))
+            
+    train_graphs = [graphs[i] for i in tr_idx]
+    valid_graphs = [graphs[i] for i in va_idx]
+    test_graphs = [graphs[i] for i in te_idx]
+    train_classes = [classes[i] for i in tr_idx]
+    valid_classes = [classes[i] for i in va_idx]
+    test_classes = [classes[i] for i in te_idx]
+    
+    return train_graphs, train_classes, valid_graphs, valid_classes, test_graphs, test_classes
 
 def create_graph_enzymes(file):
     
@@ -114,56 +166,83 @@ def create_graph_mutag(file):
     
     return g, c
     
-def readout(h):
+def create_graph_gwhist(file):
     
-    reads = map(lambda x: F.relu(R(h[x])), h.keys())
-    readout = Variable(torch.zeros(1, 128))
-    for read in reads:
-        readout = readout + read
-    return readout
-
-def message_pass(g, h, k):
-  #flow_delta = Variable(torch.zeros(1, 1))
-  #h_t = Variable(torch.zeros(1, 1, 75))
-    for v in g.keys():
-        neighbors = g[v]
-        for neighbor in neighbors:
-            e_vw = neighbor[0]
-            w = neighbor[1]
-      #bond_type = e_vw.GetBondType()
-      #A_vw = A[str(e_vw.GetBondType())]
-
-            m_v = h[w]
-            catted = torch.cat([h[v], m_v], 1)
-      #gru_act, h_t = GRU(catted.view(1, 1, 150), h_t)
-      
-      # measure convergence
-      #pdist = nn.PairwiseDistance(2)
-      #flow_delta = flow_delta + torch.sum(pdist(gru_act.view(1, 75), h[v]))
-      
-      #h[v] = gru_act.view(1, 75)
-            h[v] = U(catted)
+    tree_gxl = ET.parse(file)
+    root_gxl = tree_gxl.getroot()
     
+    vl = []    
+    
+    for node in root_gxl.iter('node'):
+        for attr in node.iter('attr'):
+            if(attr.get('name') == 'x'):
+                x = attr.find('float').text
+            elif(attr.get('name') == 'y'):
+                y = attr.find('float').text
+        vl += [[x, y]]
 
+    g = nx.Graph()                        
+    
+    for edge in root_gxl.iter('edge'):
+        s = edge.get('from')
+        s = int(s.split('_')[1]) + 1
+        t = edge.get('to')
+        t = int(t.split('_')[1]) + 1
+        g.add_edge(s,t)
         
-#    g = OrderedDict({})
-#    h = OrderedDict({})    
+    for i in range(1, g.number_of_nodes()+1):
+        g.node[i]['labels'] = np.array(vl[i-1])
+        
+    return g
     
-
-#def construct_multigraph(smile):
-#  g = OrderedDict({})
-#  h = OrderedDict({})
-#
-#  molecule = Chem.MolFromSmiles(smile)
-#  for i in xrange(0, molecule.GetNumAtoms()):
-#    atom_i = molecule.GetAtomWithIdx(i)
-#    h[i] = Variable(torch.FloatTensor(dc.feat.graph_features.atom_features(atom_i))).view(1, 75)
-#    for j in xrange(0, molecule.GetNumAtoms()):
-#      e_ij = molecule.GetBondBetweenAtoms(i, j)
-#      if e_ij != None:
-#        atom_j = molecule.GetAtomWithIdx(j)
-#        if i not in g:
-#          g[i] = []
-#          g[i].append( (e_ij, j) )
-#
-#  return g, h
+if __name__ == '__main__':
+    
+    directory = '/home/adutta/Workspace/Datasets/Graphs'
+    
+    dataset = 'enzymes'
+    print(dataset)
+    train_graphs, train_classes, valid_graphs, valid_classes, test_graphs, test_classes = load_dataset(directory, dataset)
+    print(len(train_graphs), len(valid_graphs), len(test_graphs))
+    
+    dataset = 'mutag'
+    print(dataset)
+    train_graphs, train_classes, valid_graphs, valid_classes, test_graphs, test_classes = load_dataset(directory, dataset)
+    print(len(train_graphs), len(valid_graphs), len(test_graphs))
+    
+    directory = '/home/adutta/Workspace/Datasets/GWHistoGraphs'
+    dataset = 'gwhist'
+    
+    subdir_gwhist = '01_Keypoint'
+    print(subdir_gwhist)
+    train_graphs, train_classes, valid_graphs, valid_classes, test_graphs, test_classes = load_dataset(directory, dataset, subdir_gwhist)
+    print(len(train_graphs), len(valid_graphs), len(test_graphs))
+    
+    subdir_gwhist = '02_Grid-NNA'
+    print(subdir_gwhist)
+    train_graphs, train_classes, valid_graphs, valid_classes, test_graphs, test_classes = load_dataset(directory, dataset, subdir_gwhist)
+    print(len(train_graphs), len(valid_graphs), len(test_graphs))
+    
+    subdir_gwhist = '03_Grid-MST'
+    print(subdir_gwhist)
+    train_graphs, train_classes, valid_graphs, valid_classes, test_graphs, test_classes = load_dataset(directory, dataset, subdir_gwhist)
+    print(len(train_graphs), len(valid_graphs), len(test_graphs))
+    
+    subdir_gwhist = '04_Grid-DEL'
+    print(subdir_gwhist)
+    train_graphs, train_classes, valid_graphs, valid_classes, test_graphs, test_classes = load_dataset(directory, dataset, subdir_gwhist)
+    print(len(train_graphs), len(valid_graphs), len(test_graphs))
+    
+    subdir_gwhist = '05_Projection'
+    print(subdir_gwhist)
+    train_graphs, train_classes, valid_graphs, valid_classes, test_graphs, test_classes = load_dataset(directory, dataset, subdir_gwhist)
+    print(len(train_graphs), len(valid_graphs), len(test_graphs))
+    
+    subdir_gwhist = '06_Split'
+    print(subdir_gwhist)
+    train_graphs, train_classes, valid_graphs, valid_classes, test_graphs, test_classes = load_dataset(directory, dataset, subdir_gwhist)
+    print(len(train_graphs), len(valid_graphs), len(test_graphs))
+    
+    
+    
+    
+    
