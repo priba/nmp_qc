@@ -7,6 +7,9 @@ Implementation of Neural Message Passing as proposed by Justin Gilmer *et al.* i
     $ pip install -r requirements.txt
     $ python main.py
 
+## Data
+
+The data used in this project can be downloaded [here](https://github.com/priba/nmp_qc/tree/master/data).
 ## TODO
 
 - [x] Data downloader.
