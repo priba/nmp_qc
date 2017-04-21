@@ -61,7 +61,7 @@ def xyzGraphReader(graph_file, verbose=False):
         g = initGraph(properties)
 
         # Atoms properties
-	for i in range(na):
+        for i in range(na):
             atom_properties = f.readline()
             g = addAtom(g, atom_properties) 
 
@@ -71,14 +71,36 @@ def xyzGraphReader(graph_file, verbose=False):
         # SMILES
         smiles = f.readline()
         smiles = smiles.split()
-	smiles = smiles[0]
+        smiles = smiles[0]
         
-        m1 = Chem.MolFromSmiles(smiles)
+        m = Chem.MolFromSmiles(smiles)
         print na
-        print m1.GetNumAtoms()
+        print m.GetNumAtoms()
         
-        #for i in xrange(0,m.GetNumAtoms()):
-        #    atom_i = m.GetAtomWithIdx(i)
+        for i in xrange(0,m.GetNumAtoms()):
+            atom_i = m.GetAtomWithIdx(i)
+
+            # Atom type
+            atom_i.GetSymbol()
+            # Atomic number
+            atom_i.GetAtomicNum()
+
+            # Aromatic
+            atom_i.GetIsAromatic()
+            # Hybridization
+            atom_i.GetHybridization()
+
+            for j in xrange(0, m.GetNumAtoms()):
+                e_ij = m.GetBondBetweenAtoms(i, j)
+                if e_ij != None:
+                    e_ij.GetBondType()
+
+                    # Acceptor?
+                    e_ij.GetEndAtomIdx()
+                    atom_j = m.GetAtomWithIdx(j)
+                    if i not in g:
+                        g[i] = []
+                        g[i].append( (e_ij, j) )
 
         # InChI
         inchis = f.readline()
