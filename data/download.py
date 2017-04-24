@@ -21,6 +21,16 @@ import wget
 import zipfile
 import tarfile
 
+# Download file
+def download_file(url, file_ext, dir_path='./'):
+    file_name = wget.download(url, out=dir_path)
+    file_path = os.path.join(dir_path, file_name)
+    if file_ext == '.zip':
+        zip_ref = zipfile.ZipFile(file_path,'r')
+        zip_ref.extractall(dir_path)
+        zip_ref.close()
+        os.remove(file_path)
+
 # Download data from figshare 
 def download_figshare(file_name, file_ext, dir_path='./', change_name = None):
     prepare_data_dir(dir_path)
@@ -78,7 +88,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Download dataset for Message Passing Algorithm.')
     # Positional arguments
     parser.add_argument('datasets', metavar='D', type=str.lower, nargs='+', choices=['qm9','mutag',
-                        'enzymes'], help='Name of dataset to download [QM9,MUTAG,ENZYMES]')
+                        'enzymes', 'graph_kernels'], help='Name of dataset to download [QM9,MUTAG,ENZYMES,GRAPH_KERNELS]')
     # I/O
     parser.add_argument('-p', '--path', metavar='dir', type=str, nargs=1,
                         help='path to store the data (default ./)')
@@ -101,3 +111,5 @@ if __name__ == '__main__':
         download_figshare('3132449', '.zip', args.path)
     if 'enzymes' in args.datasets:
         download_figshare('3132446', '.zip', args.path)
+    if 'graph_kernels' in args.datasets:
+        download_file('https://www.ethz.ch/content/dam/ethz/special-interest/bsse/borgwardt-lab/Projects/GraphKernels/data_graphml.zip', '.zip', args.path)
