@@ -92,3 +92,6 @@ ENV/
 data/mutag/*
 data/enzymes/*
 data/qm9/*
+
+# Pycharm
+.idea
