@@ -10,6 +10,7 @@ __email__ = "priba@cvc.uab.cat, adutta@cvc.uab.cat"
 import numpy as np
 import networkx as nx
 import random
+import getpass as gp
 
 from os import listdir
 from os.path import isfile, join
@@ -49,6 +50,25 @@ def load_dataset(directory, dataset, subdir_gwhist = '01_Keypoint' ):
             graphs += [g]
             classes += [c]
             
+        train_graphs, train_classes, valid_graphs, valid_classes, test_graphs, test_classes = divide_datasets(graphs, classes)
+        
+    elif dataset == 'MUTAG' or dataset == 'ENZYMES' or dataset == 'NCI1' or \
+    dataset == 'NCI109' or dataset == 'DD':
+        
+        label_file = dataset + '.label'
+        list_file = dataset + '.list'
+        
+        label_file_path = join(directory, dataset, label_file)
+        list_file_path = join(directory, dataset, list_file)
+        
+        with open(label_file_path, 'r') as f:
+            l = f.read()
+            classes = [int(s) for s in l.split() if s.isdigit()]
+            
+        with open(list_file_path, 'r') as f:
+            files = f.read().splitlines()
+            
+        graphs = load_graphml(join(directory, dataset), files)        
         train_graphs, train_classes, valid_graphs, valid_classes, test_graphs, test_classes = divide_datasets(graphs, classes)
             
     elif dataset == 'gwhist':
@@ -96,12 +116,23 @@ def load_gwhist(data_dir, files):
         g = create_graph_gwhist(join(data_dir, files[i]))
         graphs += [g]
  
-    return graphs    
+    return graphs
+    
+def load_graphml(data_dir, files):
+    
+    graphs = []    
+    for i in range(len(files)):
+        g = nx.read_graphml(join(data_dir,files[i]))
+        graphs += [g]
+        
+    return graphs
     
 def read_2cols_set_files(file):
     
     f = open(file, 'r')
     lines = f.read().splitlines()
+    f.close()
+    
     classes = []
     files = []
     for line in lines:        
@@ -137,6 +168,7 @@ def create_graph_enzymes(file):
     
     f = open(file, 'r')
     lines = f.read().splitlines()
+    f.close()
     
     # get the indices of the vertext, adj list and class
     idx_vertex = lines.index("#v - vertex labels")
@@ -168,6 +200,7 @@ def create_graph_mutag(file):
     
     f = open(file, 'r')
     lines = f.read().splitlines()
+    f.close()
     
     # get the indices of the vertext, adj list and class
     idx_vertex = lines.index("#v - vertex labels")
@@ -219,7 +252,9 @@ def create_graph_gwhist(file):
     
 if __name__ == '__main__':
     
-    directory = '/home/anjan/Workspace/Datasets/Graphs'
+    user = gp.getuser()
+    
+    directory = '/home/' + user + '/Workspace/Datasets/Graphs'
     
     dataset = 'enzymes'
     print(dataset)
@@ -231,7 +266,32 @@ if __name__ == '__main__':
     train_graphs, train_classes, valid_graphs, valid_classes, test_graphs, test_classes = load_dataset(directory, dataset)
     print(len(train_graphs), len(valid_graphs), len(test_graphs))
     
-    directory = '/home/anjan/Workspace/Datasets/Graphs/GWHistoGraphs'
+    dataset = 'MUTAG'
+    print(dataset)
+    train_graphs, train_classes, valid_graphs, valid_classes, test_graphs, test_classes = load_dataset(directory, dataset)
+    print(len(train_graphs), len(valid_graphs), len(test_graphs))
+    
+    dataset = 'ENZYMES'
+    print(dataset)
+    train_graphs, train_classes, valid_graphs, valid_classes, test_graphs, test_classes = load_dataset(directory, dataset)
+    print(len(train_graphs), len(valid_graphs), len(test_graphs))
+    
+    dataset = 'NCI1'
+    print(dataset)
+    train_graphs, train_classes, valid_graphs, valid_classes, test_graphs, test_classes = load_dataset(directory, dataset)
+    print(len(train_graphs), len(valid_graphs), len(test_graphs))
+    
+    dataset = 'NCI109'
+    print(dataset)
+    train_graphs, train_classes, valid_graphs, valid_classes, test_graphs, test_classes = load_dataset(directory, dataset)
+    print(len(train_graphs), len(valid_graphs), len(test_graphs))
+    
+    dataset = 'DD'
+    print(dataset)
+    train_graphs, train_classes, valid_graphs, valid_classes, test_graphs, test_classes = load_dataset(directory, dataset)
+    print(len(train_graphs), len(valid_graphs), len(test_graphs))
+    
+    directory = '/home/' + user + '/Workspace/Datasets/GWHistoGraphs'
     dataset = 'gwhist'
     
     subdir_gwhist = '01_Keypoint'
