@@ -98,9 +98,6 @@ def load_dataset(directory, dataset, subdir = '01_Keypoint' ):
         
     elif dataset == 'qm9':
         
-        print(dataset)
-        print(subdir)
-        
         file_path = join(directory, dataset, subdir)
         files = [f for f in listdir(file_path) if isfile(join(file_path, f))]
         
