@@ -28,7 +28,7 @@ import xml.etree.ElementTree as ET
 random.seed(2)
 np.random.seed(2)
 
-def load_dataset(directory, dataset, subdir_gwhist = '01_Keypoint' ):    
+def load_dataset(directory, dataset, subdir = '01_Keypoint' ):    
     
     if dataset == 'enzymes':
         
@@ -80,8 +80,7 @@ def load_dataset(directory, dataset, subdir_gwhist = '01_Keypoint' ):
         train_graphs, train_classes, valid_graphs, valid_classes, test_graphs, test_classes = divide_datasets(graphs, classes)
             
     elif dataset == 'gwhist':
-        
-#        directory = '/home/adutta/Workspace/Datasets/GWHistoGraphs'                
+                    
         train_classes, train_files = read_2cols_set_files(join(directory,'Set/Train.txt'))
         test_classes, test_files = read_2cols_set_files(join(directory,'Set/Test.txt'))
         valid_classes, valid_files = read_2cols_set_files(join(directory,'Set/Valid.txt'))
@@ -89,11 +88,31 @@ def load_dataset(directory, dataset, subdir_gwhist = '01_Keypoint' ):
         train_classes, valid_classes, test_classes = \
              create_numeric_classes(train_classes, valid_classes, test_classes)
         
-        data_dir = join(directory, 'Data/Word_Graphs/01_Skew', subdir_gwhist)
+        data_dir = join(directory, 'Data/Word_Graphs/01_Skew', subdir)
         
         train_graphs = load_gwhist(data_dir, train_files)
         valid_graphs = load_gwhist(data_dir, valid_files)
         test_graphs = load_gwhist(data_dir, test_files)
+        
+    elif dataset == 'qm9':
+        
+        print(dataset)
+        print(subdir)
+        
+        file_path = join(directory, dataset, subdir)
+        files = [f for f in listdir(file_path) if isfile(join(file_path, f))]
+        
+        data_dir = join(directory, dataset, subdir)
+        
+        graphs = load_qm9(data_dir, files)
+        
+        #TODO: Split into train, valid and test sets and class information
+        train_graphs = graphs
+        train_classes = []
+        valid_graphs = graphs
+        valid_classes = []
+        test_graphs = graphs
+        test_classes = []        
         
     return train_graphs, train_classes, valid_graphs, valid_classes, test_graphs, test_classes
 
@@ -131,6 +150,15 @@ def load_graphml(data_dir, files):
     graphs = []    
     for i in range(len(files)):
         g = nx.read_graphml(join(data_dir,files[i]))
+        graphs += [g]
+        
+    return graphs
+    
+def load_qm9(data_dir, files):
+    
+    graphs = []
+    for i in range(len(files)):
+        g = xyz_graph_reader(join(data_dir, files[i]))
         graphs += [g]
         
     return graphs
@@ -346,83 +374,29 @@ def xyz_graph_reader(graph_file, verbose=False):
     
 if __name__ == '__main__':
     
-    user = gp.getuser()
-    
-    directory = '/home/' + user + '/Workspace/Datasets/Graphs'
-    
-    dataset = 'enzymes'
-    print(dataset)
-    train_graphs, train_classes, valid_graphs, valid_classes, test_graphs, test_classes = load_dataset(directory, dataset)
-    print(len(train_graphs), len(valid_graphs), len(test_graphs))
-    
-    dataset = 'mutag'
-    print(dataset)
-    train_graphs, train_classes, valid_graphs, valid_classes, test_graphs, test_classes = load_dataset(directory, dataset)
-    print(len(train_graphs), len(valid_graphs), len(test_graphs))
-    
-    dataset = 'ENZYMES'
-    print(dataset)
-    train_graphs, train_classes, valid_graphs, valid_classes, test_graphs, test_classes = load_dataset(directory, dataset)
-    print(len(train_graphs), len(valid_graphs), len(test_graphs))
-    
-    dataset = 'MUTAG'
-    print(dataset)
-    train_graphs, train_classes, valid_graphs, valid_classes, test_graphs, test_classes = load_dataset(directory, dataset)
-    print(len(train_graphs), len(valid_graphs), len(test_graphs))
-    
-    dataset = 'NCI1'
-    print(dataset)
-    train_graphs, train_classes, valid_graphs, valid_classes, test_graphs, test_classes = load_dataset(directory, dataset)
-    print(len(train_graphs), len(valid_graphs), len(test_graphs))
-    
-    dataset = 'NCI109'
-    print(dataset)
-    train_graphs, train_classes, valid_graphs, valid_classes, test_graphs, test_classes = load_dataset(directory, dataset)
-    print(len(train_graphs), len(valid_graphs), len(test_graphs))
-    
-    dataset = 'DD'
-    print(dataset)
-    train_graphs, train_classes, valid_graphs, valid_classes, test_graphs, test_classes = load_dataset(directory, dataset)
-    print(len(train_graphs), len(valid_graphs), len(test_graphs))
-    
-    directory = '/home/' + user + '/Workspace/Datasets/GWHistoGraphs'
-    dataset = 'gwhist'
-    
-    subdir_gwhist = '01_Keypoint'
-    print(subdir_gwhist)
-    train_graphs, train_classes, valid_graphs, valid_classes, test_graphs, test_classes = load_dataset(directory, dataset, subdir_gwhist)
-    print(len(train_graphs), len(valid_graphs), len(test_graphs))
-    
-    subdir_gwhist = '02_Grid-NNA'
-    print(subdir_gwhist)
-    train_graphs, train_classes, valid_graphs, valid_classes, test_graphs, test_classes = load_dataset(directory, dataset, subdir_gwhist)
-    print(len(train_graphs), len(valid_graphs), len(test_graphs))
-    
-    subdir_gwhist = '03_Grid-MST'
-    print(subdir_gwhist)
-    train_graphs, train_classes, valid_graphs, valid_classes, test_graphs, test_classes = load_dataset(directory, dataset, subdir_gwhist)
-    print(len(train_graphs), len(valid_graphs), len(test_graphs))
-    
-    subdir_gwhist = '04_Grid-DEL'
-    print(subdir_gwhist)
-    train_graphs, train_classes, valid_graphs, valid_classes, test_graphs, test_classes = load_dataset(directory, dataset, subdir_gwhist)
-    print(len(train_graphs), len(valid_graphs), len(test_graphs))
-    
-    subdir_gwhist = '05_Projection'
-    print(subdir_gwhist)
-    train_graphs, train_classes, valid_graphs, valid_classes, test_graphs, test_classes = load_dataset(directory, dataset, subdir_gwhist)
-    print(len(train_graphs), len(valid_graphs), len(test_graphs))
-    
-    subdir_gwhist = '06_Split'
-    print(subdir_gwhist)
-    train_graphs, train_classes, valid_graphs, valid_classes, test_graphs, test_classes = load_dataset(directory, dataset, subdir_gwhist)
-    print(len(train_graphs), len(valid_graphs), len(test_graphs))
-    
     # Parse optios for downloading
-    parser = argparse.ArgumentParser(description='Read the specified file.')
+    parser = argparse.ArgumentParser(description='Read the specified directory, dataset and subdirectory.')
     # Positional arguments
-    parser.add_argument('file', metavar='D', nargs=1, help='Specify a file name with its path.')
-    #    graph_file = '../data/qm9/dsgdb9nsd/dsgdb9nsd_033462.xyz'
-    args = parser.parse_args()
-    # graph_file = '../data/qm9/dsC702H10nsd/dsC7O2H10nsd_0001.xyz'
-    g = xyz_graph_reader(args.file[0])
+    parser.add_argument('directory', nargs=1, help='Specify a directory.')
+    parser.add_argument('dataset', nargs=1, help='Specify a dataset.')
+    parser.add_argument('--subdir', nargs=1, help='Specify a subdirectory.')
+    
+    args = parser.parse_args()    
+    
+    directory = args.directory[0]
+    dataset = args.dataset[0]
+    
+    if dataset == 'gwhist' or dataset == 'qm9':
+        if args.subdir is None:
+            print('Error: No subdirectory mentioned for the dataset')
+            quit()
+        else:
+            subdir = args.subdir[0]
+    else:
+        subdir = []
+        
+    print(dataset)
+    train_graphs, train_classes, valid_graphs, valid_classes, test_graphs, test_classes = load_dataset(directory, dataset, subdir)
+    print(len(train_graphs), len(valid_graphs), len(test_graphs))
+    
+#    
