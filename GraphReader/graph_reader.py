@@ -103,15 +103,17 @@ def load_dataset(directory, dataset, subdir = '01_Keypoint' ):
         
         data_dir = join(directory, dataset, subdir)
         
-        graphs = load_qm9(data_dir, files)
+        graphs , labels = load_qm9(data_dir, files)
         
-        #TODO: Split into train, valid and test sets and class information
-        train_graphs = graphs
-        train_classes = []
-        valid_graphs = graphs
-        valid_classes = []
-        test_graphs = graphs
-        test_classes = []        
+        # TODO: Split into train, valid and test sets and class information
+        idx = np.random.permutation(len(labels))
+
+        valid_graphs = [graphs[i] for i in idx[0:10000]]
+        valid_classes = [labels[i] for i in idx[0:10000]]
+        test_graphs = [graphs[i] for i in idx[10000:20000]]
+        test_classes = [labels[i] for i in idx[10000:20000]]
+        train_graphs = [graphs[i] for i in idx[20000:]]
+        train_classes = [labels[i] for i in idx[20000:]]
         
     return train_graphs, train_classes, valid_graphs, valid_classes, test_graphs, test_classes
 
@@ -160,11 +162,13 @@ def load_graphml(data_dir, files):
 def load_qm9(data_dir, files):
     
     graphs = []
+    labels = []
     for i in range(len(files)):
-        g = xyz_graph_reader(join(data_dir, files[i]))
+        g , l = xyz_graph_reader(join(data_dir, files[i]))
         graphs += [g]
+        labels.append(l)
         
-    return graphs
+    return graphs, labels
 
 
 def read_2cols_set_files(file):
@@ -317,8 +321,9 @@ def init_graph(prop):
     g_G = float(prop[15])
     g_Cv = float(prop[16])
 
+    labels = [g_mu, g_alpha, g_homo, g_lumo, g_gap, g_r2, g_zpve, g_U0, g_U, g_H, g_G, g_Cv]
     return nx.Graph(tag=g_tag, index=g_index, A=g_A, B=g_B, C=g_C, mu=g_mu, alpha=g_alpha, homo=g_homo,
-                    lumo=g_lumo, gap=g_gap, r2=g_r2, zpve=g_zpve, U0=g_U0, U=g_U, H=g_H, G=g_G, Cv=g_Cv)
+                    lumo=g_lumo, gap=g_gap, r2=g_r2, zpve=g_zpve, U0=g_U0, U=g_U, H=g_H, G=g_G, Cv=g_Cv), labels
 
 
 # XYZ file reader for QM9 dataset
@@ -330,7 +335,7 @@ def xyz_graph_reader(graph_file):
 
         # Graph properties
         properties = f.readline()
-        g = init_graph(properties)
+        g, l = init_graph(properties)
         
         atom_properties = []
         # Atoms properties
@@ -380,7 +385,7 @@ def xyz_graph_reader(graph_file):
                 if e_ij is not None:
                     g.add_edge(i, j, b_type=e_ij.GetBondType(),
                                distance=np.linalg.norm(g.node[i]['coord']-g.node[j]['coord']))
-    return g
+    return g , l
     
 if __name__ == '__main__':
     

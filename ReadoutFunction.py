@@ -24,7 +24,7 @@ class ReadoutFunction:
 
     # Readout graph given node values at las layer
     def R(self, h_v):
-        return self.r_function(hv)
+        return self.r_function(h_v)
 
     # Set a readout function
     def set_readout(self, readout_def):
@@ -34,7 +34,7 @@ class ReadoutFunction:
                     'nn': self.r_dummy
                 }.get(self.r_definition, None)
         if self.r_definition is None:
-            print('WARNING!: Readout Function has not been set correctly\n\tIncorrect definition ' + set_readout_def)
+            print('WARNING!: Readout Function has not been set correctly\n\tIncorrect definition ' + readout_def)
             quit()
     
     # Get the name of the used readout function
@@ -47,6 +47,6 @@ class ReadoutFunction:
     def r_dummy(self, h):
         return []
 
-if __name__ == '__main__'
+if __name__ == '__main__':
     pass
     # TODO

@@ -48,10 +48,13 @@ args.cuda = not args.no_cuda and torch.cuda.is_available()
 ## TODO Train function
 def train(epoch):
 	# TODO
+    pass
 
 ## TODO Test function
 def test(epoch):
 	# TODO
+    pass
 
 ## TODO Epoch for loop
 for epoch in range(1, args.epochs + 1):
+ pass
