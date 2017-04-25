@@ -4,8 +4,12 @@ Collection of graph reader functions for the different datasets.
 
 ## TODO
 
-- [ ] MUTAG & ENZYMES.
-- [ ] QM9.
+- [x] MUTAG & ENZYMES.
+- [x] QM9.
+- [x] Histograph.
+- [x] NCI1, NCI109 & DD.
+- [ ] Proteines.
+- [ ] PTC.
 
 ## Autrors
 

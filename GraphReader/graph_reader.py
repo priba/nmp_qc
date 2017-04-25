@@ -1,16 +1,14 @@
+#!/usr/bin/python
 # -*- coding: utf-8 -*-
 """
-Created on Thu Apr 20 15:28:34 2017
+graph_reader.py: Reads graph datasets.
+
+Usage:
 
 """
-
-__author__ = "Pau Riba, Anjan Dutta"
-__email__ = "priba@cvc.uab.cat, adutta@cvc.uab.cat"
-
 import numpy as np
 import networkx as nx
 import random
-import getpass as gp
 
 import argparse
 
@@ -25,8 +23,12 @@ from os.path import isfile, join
 
 import xml.etree.ElementTree as ET
 
+__author__ = "Pau Riba, Anjan Dutta"
+__email__ = "priba@cvc.uab.cat, adutta@cvc.uab.cat"
+
 random.seed(2)
 np.random.seed(2)
+
 
 def load_dataset(directory, dataset, subdir = '01_Keypoint' ):    
     
@@ -116,6 +118,7 @@ def load_dataset(directory, dataset, subdir = '01_Keypoint' ):
         
     return train_graphs, train_classes, valid_graphs, valid_classes, test_graphs, test_classes
 
+
 def create_numeric_classes(train_classes, valid_classes, test_classes):
     
     classes = train_classes + valid_classes + test_classes
@@ -135,7 +138,8 @@ def create_numeric_classes(train_classes, valid_classes, test_classes):
             test_classes_[i] = ix + 1
 
     return train_classes_, valid_classes_, test_classes_        
-    
+
+
 def load_gwhist(data_dir, files):
     
     graphs = []
@@ -144,7 +148,8 @@ def load_gwhist(data_dir, files):
         graphs += [g]
  
     return graphs
-    
+
+
 def load_graphml(data_dir, files):
     
     graphs = []    
@@ -153,7 +158,8 @@ def load_graphml(data_dir, files):
         graphs += [g]
         
     return graphs
-    
+
+
 def load_qm9(data_dir, files):
     
     graphs = []
@@ -162,7 +168,8 @@ def load_qm9(data_dir, files):
         graphs += [g]
         
     return graphs
-    
+
+
 def read_2cols_set_files(file):
     
     f = open(file, 'r')
@@ -177,7 +184,8 @@ def read_2cols_set_files(file):
         files += [f + '.gxl']
 
     return classes, files
-    
+
+
 def divide_datasets(graphs, classes):
     
     uc = list(set(classes))
@@ -199,6 +207,7 @@ def divide_datasets(graphs, classes):
     test_classes = [classes[i] for i in te_idx]
     
     return train_graphs, train_classes, valid_graphs, valid_classes, test_graphs, test_classes
+
 
 def create_graph_enzymes(file):
     
@@ -231,7 +240,8 @@ def create_graph_enzymes(file):
     c = int(lines[idx_clss+1])
     
     return g, c
-    
+
+
 def create_graph_mutag(file):
     
     f = open(file, 'r')
@@ -256,7 +266,8 @@ def create_graph_mutag(file):
     c = int(lines[idx_clss+1])
     
     return g, c
-    
+
+
 def create_graph_gwhist(file):
     
     tree_gxl = ET.parse(file)
@@ -285,7 +296,9 @@ def create_graph_gwhist(file):
         g.node[i]['labels'] = np.array(vl[i-1])
         
     return g
-    
+
+
+# Initialization of graph for QM9
 def init_graph(prop):
     
     prop = prop.split()
@@ -311,7 +324,8 @@ def init_graph(prop):
                     lumo=g_lumo, gap=g_gap, r2=g_r2, zpve=g_zpve, U0=g_U0, U=g_U, H=g_H, G=g_G, Cv=g_Cv)
 
 
-def xyz_graph_reader(graph_file, verbose=False):
+# XYZ file reader for QM9 dataset
+def xyz_graph_reader(graph_file):
 
     with open(graph_file,'r') as f:
         # Number of atoms
@@ -350,7 +364,7 @@ def xyz_graph_reader(graph_file, verbose=False):
             g.add_node(i, a_type=atom_i.GetSymbol(), a_num=atom_i.GetAtomicNum(), acceptor=0, donor=0,
                        aromatic=atom_i.GetIsAromatic(), hybridization=atom_i.GetHybridization(),
                        num_h=atom_i.GetTotalNumHs(), coord=np.array(atom_properties[i][1:4], dtype='|S4').astype(np.float),
-                       pc=float(atom_properties[i][4]))
+                       pc=float(atom_properties[i][4].replace('.*^', 'e')))
 
         for i in range(0, len(feats)):
             if feats[i].GetFamily() == 'Donor':
@@ -369,7 +383,6 @@ def xyz_graph_reader(graph_file, verbose=False):
                 if e_ij is not None:
                     g.add_edge(i, j, b_type=e_ij.GetBondType(),
                                distance=np.linalg.norm(g.node[i]['coord']-g.node[j]['coord']))
-
     return g
     
 if __name__ == '__main__':
@@ -379,13 +392,14 @@ if __name__ == '__main__':
     # Positional arguments
     parser.add_argument('dataset', nargs=1, help='Specify a dataset.')
     # Optional argument
-
-    parser.add_argument('--dir', nargs=1, help='Specify the data directory.', default='../data/')
+    parser.add_argument('--dir', nargs=1, help='Specify the data directory.', default=['../data/'])
     parser.add_argument('--subdir', nargs=1, help='Specify a subdirectory.')
     
     args = parser.parse_args()    
-    
-    directory = args.directory[0]
+   
+    print args.dir
+
+    directory = args.dir[0]
     dataset = args.dataset[0]
     
     if dataset == 'gwhist' or dataset == 'qm9':
@@ -398,7 +412,8 @@ if __name__ == '__main__':
         subdir = []
         
     print(dataset)
-    train_graphs, train_classes, valid_graphs, valid_classes, test_graphs, test_classes = load_dataset(directory, dataset, subdir)
+    train_graphs, train_classes, valid_graphs, valid_classes, test_graphs, test_classes = load_dataset(directory,
+                                                                                                       dataset, subdir)
     print(len(train_graphs), len(valid_graphs), len(test_graphs))
     
 #    
