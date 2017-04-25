@@ -15,6 +15,7 @@ import torch
 __author__ = "Pau Riba, Anjan Dutta"
 __email__ = "priba@cvc.uab.cat, adutta@cvc.uab.cat" 
 
+
 class MessageFunction:
 
     # Constructor
@@ -29,18 +30,17 @@ class MessageFunction:
     def set_message(self, message_def):
         self.m_definition = message_def.lower()
 
-        # TODO Check the correct funciton
         self.m_function = {
-                    'duvenaud' : self.m_duvenaud,
-                    'ggnn' : self.m_ggnn,
-                    'intnet' : self.m_intnet,
-                    'mgc' : self.m_mgc,
-                    'bruna' : self.m_bruna,
-                    'defferrard' : self.m_deff,
-                    'kipf' : self.m_kipf
-                }.get(message_def, None)
+                    'duvenaud':     self.m_duvenaud,
+                    'ggnn':         self.m_ggnn,
+                    'intnet':       self.m_intnet,
+                    'mgc':          self.m_mgc,
+                    'bruna':        self.m_bruna,
+                    'defferrard':   self.m_deff,
+                    'kipf':         self.m_kipf
+                }.get(self.m_definition, None)
         if self.m_definition is None:
-            print('WARNING!: Message Function has not been set crorrectly\n\tIncorrect definition ' + message_def)
+            print('WARNING!: Message Function has not been set correctly\n\tIncorrect definition ' + message_def)
             quit()
 
     # Get the name of the used message function
