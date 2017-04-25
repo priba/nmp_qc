@@ -377,8 +377,10 @@ if __name__ == '__main__':
     # Parse optios for downloading
     parser = argparse.ArgumentParser(description='Read the specified directory, dataset and subdirectory.')
     # Positional arguments
-    parser.add_argument('directory', nargs=1, help='Specify a directory.')
     parser.add_argument('dataset', nargs=1, help='Specify a dataset.')
+    # Optional argument
+
+    parser.add_argument('--dir', nargs=1, help='Specify the data directory.', default='../data/')
     parser.add_argument('--subdir', nargs=1, help='Specify a subdirectory.')
     
     args = parser.parse_args()    
