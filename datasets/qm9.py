@@ -14,6 +14,8 @@ import torch.utils.data as data
 import numpy as np
 import argparse
 
+import utils
+
 import os,sys
 
 reader_folder = os.path.realpath( os.path.abspath('../GraphReader'))
@@ -31,12 +33,14 @@ class Qm9(data.Dataset):
     def __init__(self, root_path, ids, transform=None, target_transform=None):
         self.root = root_path
         self.ids = ids
+        self.transform = transform
 
     def __getitem__(self, index):
         g, target = xyz_graph_reader(os.path.join(self.root,self.ids[index]))
-        return g, target
+        h = self.transform(g)
+        return h, target
 
-    def __len__( self ):
+    def __len__(self):
         return len(self.ids)
 
 if __name__ == '__main__':
@@ -58,7 +62,7 @@ if __name__ == '__main__':
     test_ids  = [files[i] for i in idx[10000:20000]]
     train_ids = [files[i] for i in idx[20000:]]
 
-    data_train = Qm9(root, train_ids)
+    data_train = Qm9(root, train_ids, transform=utils.qm9_nodes)
     data_valid = Qm9(root, valid_ids)
     data_test = Qm9(root, test_ids)
 
