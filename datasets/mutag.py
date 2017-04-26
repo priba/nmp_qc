@@ -1,7 +1,6 @@
 import torch.utils.data as data
 import networkx as nx
 from os.path import join
-import numpy as np
 
 class MUTAG(data.Dataset):
     
@@ -18,21 +17,6 @@ class MUTAG(data.Dataset):
         with open(list_file_path, 'r') as f:
             self.files = f.read().splitlines()            
         self.ids = list(len(self.classes))
-        
-        # divide dataset into train, valid and test sets
-        tr_idx = []
-        va_idx = []
-        te_idx = []        
-        uc = list(set(self.classes))            
-        for c in uc:
-            idx = [i for i, x in enumerate(self.classes) if x == c]
-            tr_idx += sorted(np.random.choice(idx, int(0.8*len(idx)), replace=False))
-            va_idx += sorted(np.random.choice([x for x in idx if x not in tr_idx], int(0.1*len(idx)), replace=False))
-            te_idx += sorted([x for x in idx if x not in tr_idx and x not in va_idx])
-            
-        self.train_ids = tr_idx
-        self.valid_ids = va_idx
-        self.test_ids = te_idx
         
     def __getitem__(self, index):
         graph_id = self.ids[index]
