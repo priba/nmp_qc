@@ -22,6 +22,9 @@ if reader_folder not in sys.path:
 
 from GraphReader.graph_reader import xyz_graph_reader
 
+__author__ = "Pau Riba, Anjan Dutta"
+__email__ = "priba@cvc.uab.cat, adutta@cvc.uab.cat"
+
 class Qm9(data.Dataset):
 
     # Constructor

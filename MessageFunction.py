@@ -10,6 +10,12 @@
 
 from __future__ import print_function
 
+# Own modules
+import datasets
+
+import numpy as np
+import os
+import argparse
 import torch
 
 __author__ = "Pau Riba, Anjan Dutta"
@@ -61,7 +67,7 @@ class MessageFunction:
 
     # Battaglia et al. (2016), Interaction Networks
     def m_intnet(self, h_v, h_w, e_vw, args):
-        # TODO 
+        # TODO
         m = [] 
         return m
 
@@ -92,8 +98,37 @@ class MessageFunction:
 
 
 if __name__ == '__main__':
-    pass
-    # TODO
-    # Read Graph
-    # Apply message function
+    # Parse optios for downloading
+    parser = argparse.ArgumentParser(description='QM9 Object.')
+    # Optional argument
+    parser.add_argument('--root', nargs=1, help='Specify the data directory.', default=['./data/qm9/dsgdb9nsd/'])
 
+    args = parser.parse_args()
+    root = args.root[0]
+
+    files = [f for f in os.listdir(root) if os.path.isfile(os.path.join(root, f))]
+
+    idx = np.random.permutation(len(files))
+    idx = idx.tolist()
+
+    valid_ids = [files[i] for i in idx[0:10000]]
+    test_ids  = [files[i] for i in idx[10000:20000]]
+    train_ids = [files[i] for i in idx[20000:]]
+
+    data_train = datasets.Qm9(root, train_ids)
+    data_valid = datasets.Qm9(root, valid_ids)
+    data_test = datasets.Qm9(root, test_ids)
+
+    # Define message
+    m = MessageFunction('duvenaud')
+
+    print(m.get_definition())
+
+    # Select one graph
+    g, l = data_train[0]
+
+    for n, d in g.nodes_iter(data=True):
+        h_t = n
+
+    for n, d in g.nodes_iter(data=True):
+        m.M()

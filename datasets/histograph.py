@@ -1,3 +1,11 @@
+"""
+histograph.py:
+
+Usage:
+
+"""
+import networkx as nx
+
 import torch.utils.data as data
 from os.path import join
 import argparse
@@ -10,6 +18,9 @@ if reader_folder not in sys.path:
     sys.path.insert(1, reader_folder)
 
 from GraphReader.graph_reader import create_graph_gwhist, read_2cols_set_files
+
+__author__ = "Pau Riba, Anjan Dutta"
+__email__ = "priba@cvc.uab.cat, adutta@cvc.uab.cat"
 
 class HISTOGRAPH(data.Dataset):
     
@@ -40,7 +51,7 @@ if __name__ == '__main__':
     # Parse optios for downloading
     parser = argparse.ArgumentParser(description='HISTOGRAPH Object.')
     # Optional argument
-    parser.add_argument('--root', nargs=1, help='Specify the data directory.', default=['/home/adutta/Workspace/Datasets/GWHistoGraphs'])
+    parser.add_argument('--root', nargs=1, help='Specify the data directory.', default=['../data/Washington_DB_1.0'])
 
     args = parser.parse_args()
     root = args.root[0]

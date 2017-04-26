@@ -1,7 +1,17 @@
-import torch.utils.data as data
+"""
+mutag.py:
+
+Usage:
+
+"""
 import networkx as nx
+
+import torch.utils.data as data
 from os.path import join
 import argparse
+
+__author__ = "Pau Riba, Anjan Dutta"
+__email__ = "priba@cvc.uab.cat, adutta@cvc.uab.cat"
 
 class MUTAG(data.Dataset):
     
@@ -34,7 +44,7 @@ if __name__ == '__main__':
     # Parse optios for downloading
     parser = argparse.ArgumentParser(description='MUTAG Object.')
     # Optional argument
-    parser.add_argument('--root', nargs=1, help='Specify the data directory.', default=['/home/adutta/Workspace/Datasets/Graphs/MUTAG'])
+    parser.add_argument('--root', nargs=1, help='Specify the data directory.', default=['../data/data_graphml'])
 
     args = parser.parse_args()
     root = args.root[0]
