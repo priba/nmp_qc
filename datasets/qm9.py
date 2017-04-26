@@ -7,18 +7,19 @@ Usage:
 
 """
 
+import networkx as nx
+
 import torch.utils.data as data
 import numpy as np
 import argparse
 
-import os, sys
+import os,sys
 
-reader_folder = os.path.realpath( os.path.abspath( '../GraphReader' ))
+reader_folder = os.path.realpath( os.path.abspath('../GraphReader'))
 if reader_folder not in sys.path:
-    sys.path.insert( 0, reader_folder)
+    sys.path.insert(1, reader_folder)
 
 from GraphReader.graph_reader import xyz_graph_reader
-
 
 class Qm9(data.Dataset):
 
@@ -28,6 +29,7 @@ class Qm9(data.Dataset):
         self.ids = ids
 
     def __getitem__(self, index):
+        #g , target = [] , []
         g, target = xyz_graph_reader(os.path.join(self.root,self.ids[index]))
         return g, target
 
