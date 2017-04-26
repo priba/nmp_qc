@@ -1,9 +1,15 @@
 import torch.utils.data as data
-import networkx as nx
 from os.path import join
-import numpy as np
-import xml.etree.ElementTree as ET
 import argparse
+
+import os
+import sys
+
+reader_folder = os.path.realpath( os.path.abspath('../GraphReader'))
+if reader_folder not in sys.path:
+    sys.path.insert(1, reader_folder)
+
+from GraphReader.graph_reader import create_graph_gwhist, read_2cols_set_files
 
 class HISTOGRAPH(data.Dataset):
     
@@ -16,62 +22,18 @@ class HISTOGRAPH(data.Dataset):
             set_file = join(root, 'Set/Valid.txt')
         else:
             set_file = join(root, 'Set/Test.txt')
-        self.classes, self.files = self.read_2cols_set_files(set_file)
+        self.classes, self.files = read_2cols_set_files(set_file)
         self.ids = list(range(len(self.classes)))
         
     def __getitem__(self, index):
         graph_id = self.ids[index]
-        graph = self.create_graph_gwhist(join(self.root, self.files[graph_id]))        
+        graph = create_graph_gwhist(join(self.root, self.files[graph_id]))        
         target = self.classes[graph_id]
         
         return graph, target
         
     def __len__(self):
         return len(self.ids)
-        
-    def read_2cols_set_files(self, file):
-    
-        f = open(file, 'r')
-        lines = f.read().splitlines()
-        f.close()
-        
-        classes = []
-        files = []
-        for line in lines:        
-            c, f = line.split(' ')[:2]
-            classes += [c]
-            files += [f + '.gxl']
-
-        return classes, files
-        
-    def create_graph_gwhist(file):
-    
-        tree_gxl = ET.parse(file)
-        root_gxl = tree_gxl.getroot()
-        
-        vl = []    
-        
-        for node in root_gxl.iter('node'):
-            for attr in node.iter('attr'):
-                if(attr.get('name') == 'x'):
-                    x = attr.find('float').text
-                elif(attr.get('name') == 'y'):
-                    y = attr.find('float').text
-            vl += [[x, y]]
-    
-        g = nx.Graph()                        
-        
-        for edge in root_gxl.iter('edge'):
-            s = edge.get('from')
-            s = int(s.split('_')[1]) + 1
-            t = edge.get('to')
-            t = int(t.split('_')[1]) + 1
-            g.add_edge(s,t)
-            
-        for i in range(1, g.number_of_nodes()+1):
-            g.node[i]['labels'] = np.array(vl[i-1])
-            
-        return g
         
 if __name__ == '__main__':
 
