@@ -7,6 +7,7 @@ Usage:
 
 """
 
+# Networkx should be imported before torch
 import networkx as nx
 
 import torch.utils.data as data
@@ -29,7 +30,6 @@ class Qm9(data.Dataset):
         self.ids = ids
 
     def __getitem__(self, index):
-        #g , target = [] , []
         g, target = xyz_graph_reader(os.path.join(self.root,self.ids[index]))
         return g, target
 
@@ -58,3 +58,11 @@ if __name__ == '__main__':
     data_train = Qm9(root, train_ids)
     data_valid = Qm9(root, valid_ids)
     data_test = Qm9(root, test_ids)
+
+    print(len(data_train))
+    print(len(data_valid))
+    print(len(data_test))
+
+    print(data_train[1])
+    print(data_valid[1])
+    print(data_test[1])
