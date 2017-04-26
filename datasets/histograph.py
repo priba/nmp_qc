@@ -3,6 +3,7 @@ import networkx as nx
 from os.path import join
 import numpy as np
 import xml.etree.ElementTree as ET
+import argparse
 
 class HISTOGRAPH(data.Dataset):
     
@@ -15,8 +16,8 @@ class HISTOGRAPH(data.Dataset):
             set_file = join(root, 'Set/Valid.txt')
         else:
             set_file = join(root, 'Set/Test.txt')
-        self.classes, self.files = self.read_2cols_set_files(join(root,set_file))        
-        self.ids = list(len(self.classes))        
+        self.classes, self.files = self.read_2cols_set_files(set_file)
+        self.ids = list(range(len(self.classes)))
         
     def __getitem__(self, index):
         graph_id = self.ids[index]
@@ -28,7 +29,7 @@ class HISTOGRAPH(data.Dataset):
     def __len__(self):
         return len(self.ids)
         
-    def read_2cols_set_files(file):
+    def read_2cols_set_files(self, file):
     
         f = open(file, 'r')
         lines = f.read().splitlines()
@@ -71,3 +72,21 @@ class HISTOGRAPH(data.Dataset):
             g.node[i]['labels'] = np.array(vl[i-1])
             
         return g
+        
+if __name__ == '__main__':
+
+    # Parse optios for downloading
+    parser = argparse.ArgumentParser(description='HISTOGRAPH Object.')
+    # Optional argument
+    parser.add_argument('--root', nargs=1, help='Specify the data directory.', default=['/home/adutta/Workspace/Datasets/GWHistoGraphs'])
+
+    args = parser.parse_args()
+    root = args.root[0]
+
+    histograph_train = HISTOGRAPH(root = root, flag = 'Train')
+    histograph_valid = HISTOGRAPH(root = root, flag = 'Valid')
+    histograph_test = HISTOGRAPH(root = root, flag = 'Test')
+    
+    print(histograph_train.files)
+    print(histograph_valid.files)
+    print(histograph_test.files)
