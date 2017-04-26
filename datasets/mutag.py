@@ -1,7 +1,6 @@
 import torch.utils.data as data
 import networkx as nx
 from os.path import join
-import numpy as np
 import argparse
 
 class MUTAG(data.Dataset):
