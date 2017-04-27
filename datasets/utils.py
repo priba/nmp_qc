@@ -52,7 +52,6 @@ def qm9_edges(g, e_representation='chem_graph'):
         if e_representation == 'chem_graph':
             if d['b_type'] is None:
                 remove_edges += [(n1, n2)]
-#                g.remove_edge(n1, n2)
             else:
                 e_t += [i+1 for i, x in enumerate([rdkit.Chem.rdchem.BondType.SINGLE, rdkit.Chem.rdchem.BondType.DOUBLE,
                                                 rdkit.Chem.rdchem.BondType.TRIPLE, rdkit.Chem.rdchem.BondType.AROMATIC])
@@ -75,7 +74,6 @@ def qm9_edges(g, e_representation='chem_graph'):
         elif e_representation == 'raw_distance':
             if d['b_type'] is None:
                 remove_edges += [(n1, n2)]
-#                g.remove_edge(n1, n2)
             else:
                 e_t.append(d['distance'])
                 e_t += [int(d['b_type'] == x) for x in [rdkit.Chem.rdchem.BondType.SINGLE, rdkit.Chem.rdchem.BondType.DOUBLE,
@@ -88,3 +86,13 @@ def qm9_edges(g, e_representation='chem_graph'):
     for e in remove_edges:
         g.remove_edge(*e)
     return g, e
+    
+def get_graph_stats(graph_obj_handle, prop='degrees'):
+        
+    if prop == 'degrees':
+        degs = []
+        for i in range(len(graph_obj_handle)):            
+            degs += list(graph_obj_handle[i][0][0].degree().values())        
+        ret = list(set(degs))
+        
+    return ret
