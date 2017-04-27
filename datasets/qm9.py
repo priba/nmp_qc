@@ -30,15 +30,19 @@ __email__ = "priba@cvc.uab.cat, adutta@cvc.uab.cat"
 class Qm9(data.Dataset):
 
     # Constructor
-    def __init__(self, root_path, ids, transform=None, target_transform=None):
+    def __init__(self, root_path, ids, vertex_transform=utils.qm9_nodes, edge_transform=utils.qm9_edges):
         self.root = root_path
         self.ids = ids
-        self.transform = transform
+        self.vertex_transform = vertex_transform
+        self.edge_transform = edge_transform
 
     def __getitem__(self, index):
-        g, target = xyz_graph_reader(os.path.join(self.root,self.ids[index]))
-        h = self.transform(g)
-        return h, target
+        g, target = xyz_graph_reader(os.path.join(self.root, self.ids[index]))
+        if self.vertex_transform is not None:
+            h = self.vertex_transform(g)
+        if self.edge_transform is not None:
+            g, e = self.edge_transform(g)
+        return (g, h, e), target
 
     def __len__(self):
         return len(self.ids)
@@ -62,7 +66,7 @@ if __name__ == '__main__':
     test_ids  = [files[i] for i in idx[10000:20000]]
     train_ids = [files[i] for i in idx[20000:]]
 
-    data_train = Qm9(root, train_ids, transform=utils.qm9_nodes)
+    data_train = Qm9(root, train_ids, vertex_transform=utils.qm9_nodes, edge_transform=lambda g: utils.qm9_edges(g, e_representation='raw_distance'))
     data_valid = Qm9(root, valid_ids)
     data_test = Qm9(root, test_ids)
 

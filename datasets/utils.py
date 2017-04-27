@@ -41,5 +41,44 @@ def qm9_nodes(g, hydrogen=False):
         h[n] = h_t
     return h
 
-def qm9_edges():
-    return
+
+def qm9_edges(g, e_representation='chem_graph'):
+    e={}
+    for n1, n2, d in g.edges_iter(data=True):
+        e_t = []
+        # Raw distance function
+        if e_representation == 'chem_graph':
+            if d['b_type'] is None:
+                g.remove_edge(n1, n2)
+            else:
+                e_t += [i+1 for i, x in enumerate([rdkit.Chem.rdchem.BondType.SINGLE, rdkit.Chem.rdchem.BondType.DOUBLE,
+                                                rdkit.Chem.rdchem.BondType.TRIPLE, rdkit.Chem.rdchem.BondType.AROMATIC])
+                        if x == d['b_type']]
+        elif e_representation == 'distance_bin':
+            if d['b_type'] is None:
+
+                step = 0.5
+                start = 2
+                b = 9
+                for i in range(0, 9):
+                    if d['distance']<(start+i*step):
+                        b = i
+                        break
+                e_t.append(b+5)
+            else:
+                e_t += [i+1 for i, x in enumerate([rdkit.Chem.rdchem.BondType.SINGLE, rdkit.Chem.rdchem.BondType.DOUBLE,
+                                                   rdkit.Chem.rdchem.BondType.TRIPLE, rdkit.Chem.rdchem.BondType.AROMATIC])
+                        if x == d['b_type']]
+        elif e_representation == 'raw_distance':
+            if d['b_type'] is None:
+                g.remove_edge(n1, n2)
+            else:
+                e_t.append(d['distance'])
+                e_t += [int(d['b_type'] == x) for x in [rdkit.Chem.rdchem.BondType.SINGLE, rdkit.Chem.rdchem.BondType.DOUBLE,
+                                                        rdkit.Chem.rdchem.BondType.TRIPLE, rdkit.Chem.rdchem.BondType.AROMATIC]]
+        else:
+            print('Incorrect Edge representation transform')
+            quit()
+        if e_t:
+            e[(n1, n2)] = e_t
+    return g, e

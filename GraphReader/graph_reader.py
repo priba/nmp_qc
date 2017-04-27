@@ -385,6 +385,10 @@ def xyz_graph_reader(graph_file):
                 if e_ij is not None:
                     g.add_edge(i, j, b_type=e_ij.GetBondType(),
                                distance=np.linalg.norm(g.node[i]['coord']-g.node[j]['coord']))
+                else:
+                    # Unbonded
+                    g.add_edge(i, j, b_type=None,
+                               distance=np.linalg.norm(g.node[i]['coord'] - g.node[j]['coord']))
     return g , l
     
 if __name__ == '__main__':
