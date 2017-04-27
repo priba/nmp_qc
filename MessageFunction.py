@@ -17,6 +17,8 @@ import numpy as np
 import os
 import argparse
 import torch
+import time
+
 
 __author__ = "Pau Riba, Anjan Dutta"
 __email__ = "priba@cvc.uab.cat, adutta@cvc.uab.cat" 
@@ -67,14 +69,13 @@ class MessageFunction:
 
     # Battaglia et al. (2016), Interaction Networks
     def m_intnet(self, h_v, h_w, e_vw, args):
-        # TODO
-        m = torch.cat([h_v, h_w, e_vw], 1) 
+        m = torch.cat([h_v, h_w, e_vw], 0)
+        # TODO NN taking m
         return m
 
     # Kearnes et al. (2016), Molecular Graph Convolutions
     def m_mgc(self, h_v, h_w, e_vw, args):
-        # TODO 
-        m = e_vw 
+        m = e_vw
         return m
     
     # Laplacian based methods
@@ -124,27 +125,34 @@ if __name__ == '__main__':
 
     print(m.get_definition())
 
+    start = time.time()
+
     # Select one graph
     g_tuple, l = data_train[0]
-    g, h, e = g_tuple
+    g, h_t, e = g_tuple
 
     m_t = {}
-    for n1 in g.nodes_iter():
-        neigh = g.neighbors(n1)
+    for v in g.nodes_iter():
+        neigh = g.neighbors(v)
         m_neigh = torch.FloatTensor()
-        for n2 in neigh:
-            if (n1,n2) in e:
-                e_vw = e[(n1, n2)]
+        for w in neigh:
+            if (v,w) in e:
+                e_vw = e[(v, w)]
             else:
-                e_vw = e[(n2, n1)]
+                e_vw = e[(w, v)]
+            m_v = m.M(h_t[v], h_t[w], e_vw)
             if len(m_neigh):
-                m_neigh += m.M(h[n1], h[n2], e_vw)
+                m_neigh += m_v
             else:
-                m_neigh = m.M(h[n1], h[n2], e_vw)
+                m_neigh = m_v
 
-        m_t[n1] = m_neigh
+        m_t[v] = m_neigh
+
+    end = time.time()
 
     print('Input nodes')
-    print(h)
+    print(h_t)
     print('Message')
     print(m_t)
+    print('Time')
+    print(end - start)
