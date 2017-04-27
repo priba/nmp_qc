@@ -58,12 +58,11 @@ def qm9_edges(g, e_representation='chem_graph'):
                         if x == d['b_type']]
         elif e_representation == 'distance_bin':
             if d['b_type'] is None:
-
-                step = 0.5
+                step = (6-2)/8.0
                 start = 2
                 b = 9
                 for i in range(0, 9):
-                    if d['distance']<(start+i*step):
+                    if d['distance'] < (start+i*step):
                         b = i
                         break
                 e_t.append(b+5)
