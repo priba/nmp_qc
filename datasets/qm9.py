@@ -72,10 +72,10 @@ if __name__ == '__main__':
 
     print(len(data_train))
     print(len(data_valid))
-    print(len(data_test))    
+    print(len(data_test))
     
-    print(data_train[1])
-    print(data_valid[1])
-    print(data_test[1])
+#    print(data_train[1])
+#    print(data_valid[1])
+#    print(data_test[1])
     
     print(get_graph_stats(data_valid, 'degrees'))
