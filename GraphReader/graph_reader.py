@@ -341,6 +341,8 @@ def xyz_graph_reader(graph_file):
         # Atoms properties
         for i in range(na):
             a_properties = f.readline()
+            a_properties = a_properties.replace('.*^', 'e')
+            a_properties = a_properties.replace('*^', 'e')
             a_properties = a_properties.split()
             atom_properties.append(a_properties)
 
@@ -365,8 +367,8 @@ def xyz_graph_reader(graph_file):
 
             g.add_node(i, a_type=atom_i.GetSymbol(), a_num=atom_i.GetAtomicNum(), acceptor=0, donor=0,
                        aromatic=atom_i.GetIsAromatic(), hybridization=atom_i.GetHybridization(),
-                       num_h=atom_i.GetTotalNumHs(), coord=np.array(atom_properties[i][1:4], dtype='|S4').astype(np.float),
-                       pc=float(atom_properties[i][4].replace('.*^', 'e')))
+                       num_h=atom_i.GetTotalNumHs(), coord=np.array(atom_properties[i][1:4]).astype(np.float),
+                       pc=float(atom_properties[i][4]))
 
         for i in range(0, len(feats)):
             if feats[i].GetFamily() == 'Donor':
@@ -392,7 +394,7 @@ def xyz_graph_reader(graph_file):
     return g , l
     
 if __name__ == '__main__':
-    
+
     # Parse optios for downloading
     parser = argparse.ArgumentParser(description='Read the specified directory, dataset and subdirectory.')
     # Positional arguments
