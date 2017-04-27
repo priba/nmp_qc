@@ -57,7 +57,7 @@ class MessageFunction:
     
     # Duvenaud et al. (2015), Convolutional Networks for Learning Molecular Fingerprints
     def m_duvenaud(self, h_v, h_w, e_vw, args):
-        m = torch.cat([h_w, e_vw] , 1)
+        m = torch.cat([h_w, e_vw] , 0)
         return m
 
     # Li et al. (2016), Gated Graph Neural Networks (GG-NN)
@@ -125,10 +125,26 @@ if __name__ == '__main__':
     print(m.get_definition())
 
     # Select one graph
-    g, l = data_train[0]
+    g_tuple, l = data_train[0]
+    g, h, e = g_tuple
 
-    for n, d in g.nodes_iter(data=True):
-        h_t = n
+    m_t = {}
+    for n1 in g.nodes_iter():
+        neigh = g.neighbors(n1)
+        m_neigh = torch.FloatTensor()
+        for n2 in neigh:
+            if (n1,n2) in e:
+                e_vw = e[(n1, n2)]
+            else:
+                e_vw = e[(n2, n1)]
+            if len(m_neigh):
+                m_neigh += m.M(h[n1], h[n2], e_vw)
+            else:
+                m_neigh = m.M(h[n1], h[n2], e_vw)
 
-    for n, d in g.nodes_iter(data=True):
-        m.M()
+        m_t[n1] = m_neigh
+
+    print('Input nodes')
+    print(h)
+    print('Message')
+    print(m_t)
