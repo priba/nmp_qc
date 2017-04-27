@@ -68,13 +68,13 @@ class MessageFunction:
     # Battaglia et al. (2016), Interaction Networks
     def m_intnet(self, h_v, h_w, e_vw, args):
         # TODO
-        m = [] 
+        m = torch.cat([h_v, h_w, e_vw], 1) 
         return m
 
     # Kearnes et al. (2016), Molecular Graph Convolutions
     def m_mgc(self, h_v, h_w, e_vw, args):
         # TODO 
-        m = [] 
+        m = e_vw 
         return m
     
     # Laplacian based methods
