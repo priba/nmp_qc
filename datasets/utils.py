@@ -44,13 +44,15 @@ def qm9_nodes(g, hydrogen=False):
 
 
 def qm9_edges(g, e_representation='chem_graph'):
-    e={}
+    remove_edges = []
+    e={}    
     for n1, n2, d in g.edges_iter(data=True):
         e_t = []
         # Raw distance function
         if e_representation == 'chem_graph':
             if d['b_type'] is None:
-                g.remove_edge(n1, n2)
+                remove_edges += [(n1, n2)]
+#                g.remove_edge(n1, n2)
             else:
                 e_t += [i+1 for i, x in enumerate([rdkit.Chem.rdchem.BondType.SINGLE, rdkit.Chem.rdchem.BondType.DOUBLE,
                                                 rdkit.Chem.rdchem.BondType.TRIPLE, rdkit.Chem.rdchem.BondType.AROMATIC])
@@ -72,7 +74,8 @@ def qm9_edges(g, e_representation='chem_graph'):
                         if x == d['b_type']]
         elif e_representation == 'raw_distance':
             if d['b_type'] is None:
-                g.remove_edge(n1, n2)
+                remove_edges += [(n1, n2)]
+#                g.remove_edge(n1, n2)
             else:
                 e_t.append(d['distance'])
                 e_t += [int(d['b_type'] == x) for x in [rdkit.Chem.rdchem.BondType.SINGLE, rdkit.Chem.rdchem.BondType.DOUBLE,
@@ -82,4 +85,6 @@ def qm9_edges(g, e_representation='chem_graph'):
             quit()
         if e_t:
             e[(n1, n2)] = torch.FloatTensor(e_t)
+    for e in remove_edges:
+        g.remove_edge(*e)
     return g, e
