@@ -115,7 +115,7 @@ if __name__ == '__main__':
     g_tuple, l = data_train[0]
     g, h_t, e = g_tuple
 
-    m_v = m.M(h_t[0], h_t[1], e[e.keys()[0]])
+    m_v = m.M(h_t[0], h_t[1], e[list(e.keys())[0]])
     in_n = len(m_v)
     out_n = 30
 
