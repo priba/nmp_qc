@@ -14,7 +14,7 @@ import torch.utils.data as data
 import numpy as np
 import argparse
 
-from utils import get_graph_stats
+import utils
 
 import os,sys
 
@@ -78,4 +78,4 @@ if __name__ == '__main__':
 #    print(data_valid[1])
 #    print(data_test[1])
     
-    print(get_graph_stats(data_valid, 'degrees'))
+    print(utils.get_graph_stats(data_valid, 'degrees'))
