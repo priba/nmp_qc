@@ -19,6 +19,8 @@ import argparse
 import torch
 import time
 
+#dtype = torch.cuda.FloatTensor
+dtype = torch.FloatTensor
 
 __author__ = "Pau Riba, Anjan Dutta"
 __email__ = "priba@cvc.uab.cat, adutta@cvc.uab.cat" 
@@ -67,7 +69,7 @@ class MessageFunction:
     
     # Duvenaud et al. (2015), Convolutional Networks for Learning Molecular Fingerprints
     def m_duvenaud(self, h_v, h_w, e_vw, args):
-        m = torch.autograd.Variable(torch.cat([h_w, e_vw] , 0))
+        m = torch.autograd.Variable(torch.cat([h_w, e_vw] , 0).type(dtype))
         return m
 
     def init_duvenaud(self, params):
@@ -113,11 +115,7 @@ if __name__ == '__main__':
     # Parse optios for downloading
     parser = argparse.ArgumentParser(description='QM9 Object.')
     # Optional argument
-<<<<<<< HEAD
-    parser.add_argument('--root', nargs=1, help='Specify the data directory.', default=['./data/qm9/dsgdb9nsd'])
-=======
     parser.add_argument('--root', nargs=1, help='Specify the data directory.', default=['./data/qm9/dsgdb9nsd/'])
->>>>>>> dc8ad676a7ad665a5b93d116c6aba9d7130e483a
 
     args = parser.parse_args()
     root = args.root[0]
@@ -149,7 +147,7 @@ if __name__ == '__main__':
     m_t = {}
     for v in g.nodes_iter():
         neigh = g.neighbors(v)
-        m_neigh = torch.FloatTensor()
+        m_neigh = dtype()
         for w in neigh:
             if (v,w) in e:
                 e_vw = e[(v, w)]

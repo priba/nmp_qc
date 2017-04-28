@@ -16,6 +16,9 @@ from joblib import Parallel, delayed
 from multiprocessing import Pool
 import multiprocessing
 
+#dtype = torch.cuda.FloatTensor
+dtype = torch.FloatTensor
+
 __author__ = "Pau Riba, Anjan Dutta"
 __email__ = "priba@cvc.uab.cat, adutta@cvc.uab.cat"
 
@@ -41,7 +44,7 @@ def qm9_nodes(g, hydrogen=False):
         # If number hydrogen is used as a
         if hydrogen:
             h_t.append(d['num_h'])
-        h[n] = torch.FloatTensor(h_t)
+        h[n] = dtype(h_t)
     return h
 
 
@@ -83,7 +86,7 @@ def qm9_edges(g, e_representation='chem_graph'):
             print('Incorrect Edge representation transform')
             quit()
         if e_t:
-            e[(n1, n2)] = torch.FloatTensor(e_t)
+            e[(n1, n2)] = dtype(e_t)
     for edg in remove_edges:
         g.remove_edge(*edg)
     return g, e

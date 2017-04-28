@@ -21,6 +21,9 @@ import os
 import argparse
 import torch
 
+#dtype = torch.cuda.FloatTensor
+dtype = torch.FloatTensor
+
 __author__ = "Pau Riba, Anjan Dutta"
 __email__ = "priba@cvc.uab.cat, adutta@cvc.uab.cat" 
 
@@ -61,17 +64,15 @@ class UpdateFunction:
 
     # Duvenaud
     def u_duvenaud(self, h_v, m_v, opt):
-        x = torch.autograd.Variable(torch.randn(self.args[opt['deg']].size()[1]).type(torch.FloatTensor))
+        x = torch.autograd.Variable(torch.randn(self.args[opt['deg']].size()[1]).type(dtype))
         torch.addmv(x, torch.t(self.args[opt['deg']]), m_v)
         return torch.nn.Sigmoid()(x)
-#        return torch.nn.Sigmoid(torch.mm(torch.t(self.args[opt['deg']]), m_v))
-#        return torch.nn.Sigmoid(torch.addmv(x, torch.t(self.args[opt['deg']]), m_v))
 
     def init_duvenaud(self, params):
         args={}
         # Define a parameter matrix H for each degree.
         for d in params['deg']:
-            args[d] = torch.nn.Parameter(torch.FloatTensor(params['in'], params['out']))
+            args[d] = torch.nn.Parameter(dtype(params['in'], params['out']))
         return args
 
 if __name__ == '__main__':
@@ -79,7 +80,7 @@ if __name__ == '__main__':
     # Parse optios for downloading
     parser = argparse.ArgumentParser(description='QM9 Object.')
     # Optional argument
-    parser.add_argument('--root', nargs=1, help='Specify the data directory.', default=['./data/qm9/dsgdb9nsd'])
+    parser.add_argument('--root', nargs=1, help='Specify the data directory.', default=['./data/qm9/dsgdb9nsd/'])
 
     args = parser.parse_args()
     root = args.root[0]
@@ -127,7 +128,7 @@ if __name__ == '__main__':
     h_t1 = {}
     for v in g.nodes_iter():
         neigh = g.neighbors(v)
-        m_neigh = torch.FloatTensor()
+        m_neigh = dtype()
         for w in neigh:
             if (v, w) in e:
                 e_vw = e[(v, w)]

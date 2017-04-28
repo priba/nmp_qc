@@ -21,6 +21,9 @@ import os
 import argparse
 import numpy as np
 
+#dtype = torch.cuda.FloatTensor
+dtype = torch.FloatTensor
+
 __author__ = "Pau Riba, Anjan Dutta"
 __email__ = "priba@cvc.uab.cat, adutta@cvc.uab.cat" 
 
@@ -62,7 +65,7 @@ class ReadoutFunction:
 
     # Duvenaud
     def r_duvenaud(self, h):
-        aux = torch.FloatTensor(self.args['out'])
+        aux = dtype(self.args['out'])        
         for i in range(len(h)):
             aux += args['softmax'](torch.mm(self.args[opt['deg']], h[i].values()))
         return args['f']( aux )
@@ -75,7 +78,7 @@ class ReadoutFunction:
         args['softmax'] = torch.nn.Softmax()
         # Define a parameter matrix W for each layer.
         for l in range(params['layers']):
-            args[l] = torch.nn.Parameter(torch.FloatTensor(params['in'][l], params['out']))
+            args[l] = torch.nn.Parameter(dtype(params['in'][l], params['out']))
         args['f'] = torch.nn.Linear(params['out'], params['target'])
         return args
 
@@ -142,7 +145,7 @@ if __name__ == '__main__':
     h.append({})
     for v in g.nodes_iter():
         neigh = g.neighbors(v)
-        m_neigh = torch.FloatTensor()
+        m_neigh = dtype()
         for w in neigh:
             if (v, w) in e:
                 e_vw = e[(v, w)]
