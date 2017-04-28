@@ -98,7 +98,7 @@ def degree_values(obj, start, end):
 def get_graph_stats(graph_obj_handle, prop='degrees'):
     if prop == 'degrees':
         num_cores = multiprocessing.cpu_count()
-        inputs = [i*len(graph_obj_handle)/num_cores for i in range(num_cores) ] +[ len(graph_obj_handle)]
+        inputs = [int(i*len(graph_obj_handle)/num_cores) for i in range(num_cores) ] +[ len(graph_obj_handle)]
         res = Parallel(n_jobs = num_cores)(delayed(degree_values)(graph_obj_handle, inputs[i], inputs[i+1]) for i in range(num_cores))
 
     return list(set([j for i in res for j in i]))

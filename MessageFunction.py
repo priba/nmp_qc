@@ -59,7 +59,7 @@ class MessageFunction:
     
     # Duvenaud et al. (2015), Convolutional Networks for Learning Molecular Fingerprints
     def m_duvenaud(self, h_v, h_w, e_vw, args):
-        m = torch.cat([h_w, e_vw] , 0)
+        m = torch.autograd.Variable(torch.cat([h_w, e_vw] , 0))
         return m
 
     # Li et al. (2016), Gated Graph Neural Networks (GG-NN)
@@ -102,7 +102,7 @@ if __name__ == '__main__':
     # Parse optios for downloading
     parser = argparse.ArgumentParser(description='QM9 Object.')
     # Optional argument
-    parser.add_argument('--root', nargs=1, help='Specify the data directory.', default=['/home/adutta/Workspace/Datasets/Graphs/qm9/dsgdb9nsd'])
+    parser.add_argument('--root', nargs=1, help='Specify the data directory.', default=['./data/qm9/dsgdb9nsd'])
 
     args = parser.parse_args()
     root = args.root[0]

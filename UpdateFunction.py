@@ -12,6 +12,7 @@ from __future__ import print_function
 
 # Own modules
 import datasets
+from datasets import utils
 from MessageFunction import MessageFunction
 
 import numpy as np
@@ -56,7 +57,11 @@ class UpdateFunction:
 
     # Duvenaud
     def u_duvenaud(self, h_v, m_v, opt):
-        return torch.nn.Sigmoid(torch.mm(self.args[opt['deg']], m_v))
+        x = torch.autograd.Variable(torch.randn(self.args[opt['deg']].size()[1]).type(torch.FloatTensor))
+        torch.addmv(x, torch.t(self.args[opt['deg']]), m_v)
+        return torch.nn.Sigmoid()(x)
+#        return torch.nn.Sigmoid(torch.mm(torch.t(self.args[opt['deg']]), m_v))
+#        return torch.nn.Sigmoid(torch.addmv(x, torch.t(self.args[opt['deg']]), m_v))
 
     def init_duvenaud(self, params):
         args={}
@@ -70,7 +75,7 @@ if __name__ == '__main__':
     # Parse optios for downloading
     parser = argparse.ArgumentParser(description='QM9 Object.')
     # Optional argument
-    parser.add_argument('--root', nargs=1, help='Specify the data directory.', default=['./data/qm9/dsgdb9nsd/'])
+    parser.add_argument('--root', nargs=1, help='Specify the data directory.', default=['./data/qm9/dsgdb9nsd'])
 
     args = parser.parse_args()
     root = args.root[0]
@@ -88,7 +93,7 @@ if __name__ == '__main__':
     data_valid = datasets.Qm9(root, valid_ids)
     data_test = datasets.Qm9(root, test_ids)
 
-    d = datasets.utils.get_graph_stats(data_train, 'degrees')
+    d = datasets.utils.get_graph_stats(data_test, 'degrees')
 
     ## Define message
     m = MessageFunction('duvenaud')
@@ -98,7 +103,7 @@ if __name__ == '__main__':
     g_tuple, l = data_train[0]
     g, h_t, e = g_tuple
 
-    m_v = m.M(h_t[0], h_t[1], e[e.keys()[0]])
+    m_v = m.M(h_t[0], h_t[1], e[list(e.keys())[0]])
     in_n = len(m_v)
     out_n = 30
 
