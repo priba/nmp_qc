@@ -15,7 +15,7 @@ import numpy as np
 import argparse
 
 import utils
-
+import time
 import os,sys
 
 reader_folder = os.path.realpath( os.path.abspath('../GraphReader'))
@@ -52,7 +52,7 @@ if __name__ == '__main__':
     # Parse optios for downloading
     parser = argparse.ArgumentParser(description='QM9 Object.')
     # Optional argument
-    parser.add_argument('--root', nargs=1, help='Specify the data directory.', default=['..data/qm9/dsgdb9nsd'])
+    parser.add_argument('--root', nargs=1, help='Specify the data directory.', default=['../data/qm9/dsgdb9nsd'])
 
     args = parser.parse_args()
     root = args.root[0]
@@ -74,8 +74,12 @@ if __name__ == '__main__':
     print(len(data_valid))
     print(len(data_test))
     
-#    print(data_train[1])
-#    print(data_valid[1])
-#    print(data_test[1])
-    
+    print(data_train[1])
+    print(data_valid[1])
+    print(data_test[1])
+
+    start = time.time()
     print(utils.get_graph_stats(data_valid, 'degrees'))
+    end = time.time()
+    print('Time Statistics Par')
+    print(end - start)

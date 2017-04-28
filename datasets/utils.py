@@ -13,6 +13,7 @@ from __future__ import print_function
 import rdkit
 import torch
 from joblib import Parallel, delayed
+from multiprocessing import Pool
 import multiprocessing
 
 __author__ = "Pau Riba, Anjan Dutta"
@@ -87,19 +88,17 @@ def qm9_edges(g, e_representation='chem_graph'):
         g.remove_edge(*edg)
     return g, e
     
-#def degree_values(obj):
-#    return set(list(obj.degree().values()))
-    
-def get_graph_stats(graph_obj_handle, prop='degrees'):    
-        
-#    if prop == 'degrees':
-#        num_cores = multiprocessing.cpu_count()
-#        inputs = range(len(graph_obj_handle))        
-#        res = list(set(Parallel(n_jobs = num_cores)(delayed(degree_values)(graph_obj_handle[i][0][0]) for i in inputs)))
-        
+def degree_values(obj, start, end):
     degs = []
-    for i in range(len(graph_obj_handle)):
-        degs += set(list(graph_obj_handle[i][0][0].degree().values()))
-    res = list(degs)
-        
-    return res
+    for i in range(start, end):
+        degs += set(list(obj[i][0][0].degree().values()))
+    return list(degs)
+
+
+def get_graph_stats(graph_obj_handle, prop='degrees'):
+    if prop == 'degrees':
+        num_cores = multiprocessing.cpu_count()
+        inputs = [i*len(graph_obj_handle)/num_cores for i in range(num_cores) ] +[ len(graph_obj_handle)]
+        res = Parallel(n_jobs = num_cores)(delayed(degree_values)(graph_obj_handle, inputs[i], inputs[i+1]) for i in range(num_cores))
+
+    return list(set([j for i in res for j in i]))
