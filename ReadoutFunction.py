@@ -28,7 +28,10 @@ __email__ = "priba@cvc.uab.cat, adutta@cvc.uab.cat"
 class ReadoutFunction:
 
     # Constructor
-    def __init__(self, readout_def='nn', args=None):
+    def __init__(self, readout_def='nn', args={}):
+        self.r_definition = ''
+        self.r_function = None
+        self.args = {}
         self.__set_readout(readout_def, args)
 
     # Readout graph given node values at las layer
@@ -42,13 +45,14 @@ class ReadoutFunction:
         self.r_function = {
                     'duvenaud': self.r_duvenaud
                 }.get(self.r_definition, None)
-        if self.r_definition is None:
+
+        if self.r_function is None:
             print('WARNING!: Readout Function has not been set correctly\n\tIncorrect definition ' + readout_def)
             quit()
 
         self.args = {
                 'duvenaud': self.init_duvenaud(args)
-            }.get(self.r_definition, None)
+            }.get(self.r_definition, {})
 
     # Get the name of the used readout function
     def get_definition(self):
@@ -56,7 +60,7 @@ class ReadoutFunction:
 
     ## Definition of various state of the art update functions
 
-    # Dummy
+    # Duvenaud
     def r_duvenaud(self, h):
         aux = torch.FloatTensor(self.args['out'])
         for i in range(len(h)):

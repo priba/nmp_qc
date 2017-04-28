@@ -27,11 +27,14 @@ __email__ = "priba@cvc.uab.cat, adutta@cvc.uab.cat"
 class UpdateFunction:
 
     # Constructor
-    def __init__(self, update_def='nn', args=None):
+    def __init__(self, update_def='nn', args={}):
+        self.u_definition = ''
+        self.u_function = None
+        self.args = {}
         self.__set_update(update_def, args)
 
     # Update node hv given message mv
-    def U(self, h_v, m_v, opt):
+    def U(self, h_v, m_v, opt={}):
         return self.u_function(h_v, m_v, opt)
 
     # Set update function
@@ -41,12 +44,13 @@ class UpdateFunction:
         self.u_function = {
                     'duvenaud':   self.u_duvenaud
                 }.get(self.u_definition, None)
+
         if self.u_function is None:
             print('WARNING!: Update Function has not been set correctly\n\tIncorrect definition ' + update_def)
 
         self.args = {
                 'duvenaud': self.init_duvenaud(args)
-            }.get(self.u_definition, None)
+            }.get(self.u_definition, {})
 
     # Get the name of the used update function
     def get_definition(self):
@@ -90,6 +94,7 @@ if __name__ == '__main__':
 
     d = datasets.utils.get_graph_stats(data_train, 'degrees')
 
+    print('READ')
     ## Define message
     m = MessageFunction('duvenaud')
 

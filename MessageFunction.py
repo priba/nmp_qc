@@ -27,15 +27,18 @@ __email__ = "priba@cvc.uab.cat, adutta@cvc.uab.cat"
 class MessageFunction:
 
     # Constructor
-    def __init__(self, message_def='duvenaud'):
-        self.__set_message(message_def)
+    def __init__(self, message_def='duvenaud', args={}):
+        self.m_definition = ''
+        self.m_function = None
+        self.args = {}
+        self.__set_message(message_def, args)
 
     # Message from h_v to h_w through e_vw
     def M(self, h_v, h_w, e_vw, args=None):
         return self.m_function(h_v, h_w, e_vw, args)
 
     # Set a message function
-    def __set_message(self, message_def):
+    def __set_message(self, message_def, args={}):
         self.m_definition = message_def.lower()
 
         self.m_function = {
@@ -47,9 +50,14 @@ class MessageFunction:
                     'defferrard':   self.m_deff,
                     'kipf':         self.m_kipf
                 }.get(self.m_definition, None)
-        if self.m_definition is None:
+
+        if self.m_function is None:
             print('WARNING!: Message Function has not been set correctly\n\tIncorrect definition ' + message_def)
             quit()
+
+        self.args = {
+                'duvenaud': self.init_duvenaud(args)
+            }.get(self.m_definition, {})
 
     # Get the name of the used message function
     def get_definition(self):
@@ -61,6 +69,9 @@ class MessageFunction:
     def m_duvenaud(self, h_v, h_w, e_vw, args):
         m = torch.cat([h_w, e_vw] , 0)
         return m
+
+    def init_duvenaud(self, params):
+        return {}
 
     # Li et al. (2016), Gated Graph Neural Networks (GG-NN)
     def m_ggnn(self, h_v, h_w, e_vw, args):
@@ -102,7 +113,7 @@ if __name__ == '__main__':
     # Parse optios for downloading
     parser = argparse.ArgumentParser(description='QM9 Object.')
     # Optional argument
-    parser.add_argument('--root', nargs=1, help='Specify the data directory.', default=['/home/adutta/Workspace/Datasets/Graphs/qm9/dsgdb9nsd'])
+    parser.add_argument('--root', nargs=1, help='Specify the data directory.', default=['./data/qm9/dsgdb9nsd/'])
 
     args = parser.parse_args()
     root = args.root[0]
