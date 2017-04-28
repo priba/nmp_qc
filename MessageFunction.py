@@ -28,14 +28,14 @@ class MessageFunction:
 
     # Constructor
     def __init__(self, message_def='duvenaud'):
-        self.set_message(message_def)
+        self.__set_message(message_def)
 
     # Message from h_v to h_w through e_vw
     def M(self, h_v, h_w, e_vw, args=None):
         return self.m_function(h_v, h_w, e_vw, args)
 
     # Set a message function
-    def set_message(self, message_def):
+    def __set_message(self, message_def):
         self.m_definition = message_def.lower()
 
         self.m_function = {

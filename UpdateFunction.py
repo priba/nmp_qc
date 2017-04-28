@@ -28,14 +28,14 @@ class UpdateFunction:
 
     # Constructor
     def __init__(self, update_def='nn', args=None):
-        self.set_update(update_def, args)
+        self.__set_update(update_def, args)
 
     # Update node hv given message mv
     def U(self, h_v, m_v, opt):
         return self.u_function(h_v, m_v, opt)
 
     # Set update function
-    def set_update(self, update_def, args):
+    def __set_update(self, update_def, args):
         self.u_definition = update_def.lower()
 
         self.u_function = {
@@ -88,8 +88,7 @@ if __name__ == '__main__':
     data_valid = datasets.Qm9(root, valid_ids)
     data_test = datasets.Qm9(root, test_ids)
 
-    # d = datasets.utils.get_graph_stats(data_test, 'degrees')
-    d = [1,2,3,4]
+    d = datasets.utils.get_graph_stats(data_train, 'degrees')
 
     ## Define message
     m = MessageFunction('duvenaud')
@@ -101,11 +100,13 @@ if __name__ == '__main__':
 
     m_v = m.M(h_t[0], h_t[1], e[e.keys()[0]])
     in_n = len(m_v)
+    out_n = 30
 
     ## Define Update
-    u = UpdateFunction('duvenaud', args={'deg': d, 'in': in_n , 'out': 30})
+    u = UpdateFunction('duvenaud', args={'deg': d, 'in': in_n , 'out': out_n})
 
     print(m.get_definition())
+    print(u.get_definition())
 
     start = time.time()
 
