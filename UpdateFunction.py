@@ -27,23 +27,26 @@ __email__ = "priba@cvc.uab.cat, adutta@cvc.uab.cat"
 class UpdateFunction:
 
     # Constructor
-    def __init__(self, update_def='nn'):
-        self.set_update(update_def)
+    def __init__(self, update_def='nn', args=None):
+        self.set_update(update_def, args)
 
     # Update node hv given message mv
-    def U(self, h_v, m_v):
-        return self.u_function(h_v, m_v)
+    def U(self, h_v, m_v, opt):
+        return self.u_function(h_v, m_v, opt)
 
     # Set update function
-    def set_update(self, update_def):
+    def set_update(self, update_def, args):
         self.u_definition = update_def.lower()
 
         self.u_function = {
                     'duvenaud':   self.u_duvenaud
                 }.get(self.u_definition, None)
-
         if self.u_function is None:
             print('WARNING!: Update Function has not been set correctly\n\tIncorrect definition ' + update_def)
+
+        self.args = {
+                'duvenaud': self.init_duvenaud(args)
+            }.get(self.u_definition, None)
 
     # Get the name of the used update function
     def get_definition(self):
@@ -51,10 +54,16 @@ class UpdateFunction:
 
     ## Definition of various state of the art update functions
 
-    # Dummy
-    def u_duvenaud(self, h_v, m_v, args):
-        sigma(torch.mm(self.args[args.degree],m_v))
-        return []
+    # Duvenaud
+    def u_duvenaud(self, h_v, m_v, opt):
+        return torch.nn.Sigmoid(torch.mm(self.args[opt['deg']], m_v))
+
+    def init_duvenaud(self, params):
+        args={}
+        # Define a parameter matrix H for each degree.
+        for d in params['deg']:
+            args[d] = torch.nn.Parameter(torch.FloatTensor(params['in'], params['out']))
+        return args
 
 if __name__ == '__main__':
 
@@ -79,9 +88,22 @@ if __name__ == '__main__':
     data_valid = datasets.Qm9(root, valid_ids)
     data_test = datasets.Qm9(root, test_ids)
 
-    # Define message
+    # d = datasets.utils.get_graph_stats(data_test, 'degrees')
+    d = [1,2,3,4]
+
+    ## Define message
     m = MessageFunction('duvenaud')
-    u = UpdateFunction('duvenaud')
+
+    ## Parameters for the update function
+    # Select one graph
+    g_tuple, l = data_train[0]
+    g, h_t, e = g_tuple
+
+    m_v = m.M(h_t[0], h_t[1], e[e.keys()[0]])
+    in_n = len(m_v)
+
+    ## Define Update
+    u = UpdateFunction('duvenaud', args={'deg': d, 'in': in_n , 'out': 30})
 
     print(m.get_definition())
 
@@ -100,12 +122,15 @@ if __name__ == '__main__':
                 e_vw = e[(v, w)]
             else:
                 e_vw = e[(w, v)]
+            m_v = m.M(h_t[v], h_t[w], e_vw)
             if len(m_neigh):
-                m_neigh += m.M(h_t[v], h_t[w], e_vw)
+                m_neigh += m_v
             else:
-                m_neigh = m.M(h_t[v], h_t[w], e_vw)
+                m_neigh = m_v
 
-        h_t1[v] = u.U(h_t[v], m_neigh)
+        # Duvenaud
+        opt = {'deg': len(neigh)}
+        h_t1[v] = u.U(h_t[v], m_neigh, opt)
 
     end = time.time()
 

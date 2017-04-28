@@ -83,8 +83,8 @@ def qm9_edges(g, e_representation='chem_graph'):
             quit()
         if e_t:
             e[(n1, n2)] = torch.FloatTensor(e_t)
-    for e in remove_edges:
-        g.remove_edge(*e)
+    for edg in remove_edges:
+        g.remove_edge(*edg)
     return g, e
     
 #def degree_values(obj):
