@@ -10,9 +10,10 @@
 
 from __future__ import print_function
 
-import networkx as nx
 import rdkit
 import torch
+from joblib import Parallel, delayed
+import multiprocessing
 
 __author__ = "Pau Riba, Anjan Dutta"
 __email__ = "priba@cvc.uab.cat, adutta@cvc.uab.cat"
@@ -86,12 +87,19 @@ def qm9_edges(g, e_representation='chem_graph'):
         g.remove_edge(*e)
     return g, e
     
-def get_graph_stats(graph_obj_handle, prop='degrees'):
+#def degree_values(obj):
+#    return set(list(obj.degree().values()))
+    
+def get_graph_stats(graph_obj_handle, prop='degrees'):    
         
-    if prop == 'degrees':
-        degs = []
-        for i in range(len(graph_obj_handle)):            
-            degs += list(graph_obj_handle[i][0][0].degree().values())        
-        ret = list(set(degs))
+#    if prop == 'degrees':
+#        num_cores = multiprocessing.cpu_count()
+#        inputs = range(len(graph_obj_handle))        
+#        res = list(set(Parallel(n_jobs = num_cores)(delayed(degree_values)(graph_obj_handle[i][0][0]) for i in inputs)))
         
-    return ret
+    degs = []
+    for i in range(len(graph_obj_handle)):
+        degs += set(list(graph_obj_handle[i][0][0].degree().values()))
+    res = list(degs)
+        
+    return res
