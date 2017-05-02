@@ -17,9 +17,11 @@ from UpdateFunction import UpdateFunction
 
 import time
 import torch
+import torch.nn as nn
 import os
 import argparse
 import numpy as np
+
 
 #dtype = torch.cuda.FloatTensor
 dtype = torch.FloatTensor
@@ -28,17 +30,18 @@ __author__ = "Pau Riba, Anjan Dutta"
 __email__ = "priba@cvc.uab.cat, adutta@cvc.uab.cat" 
 
 
-class ReadoutFunction:
+class ReadoutFunction(nn.Module):
 
     # Constructor
     def __init__(self, readout_def='nn', args={}):
+        super(ReadoutFunction, self).__init__()
         self.r_definition = ''
         self.r_function = None
         self.args = {}
         self.__set_readout(readout_def, args)
 
     # Readout graph given node values at las layer
-    def R(self, h_v):
+    def forward(self, h_v):
         return self.r_function(h_v)
 
     # Set a readout function
@@ -53,9 +56,9 @@ class ReadoutFunction:
             print('WARNING!: Readout Function has not been set correctly\n\tIncorrect definition ' + readout_def)
             quit()
 
-        self.args = {
-                'duvenaud': self.init_duvenaud(args)
-            }.get(self.r_definition, {})
+        self.learn_args, self.learn_modules, self.args = {
+                    'duvenaud': self.init_duvenaud(args)
+                }.get(self.r_definition, (nn.ParameterList([]),nn.ModuleList([]),{}))
 
     # Get the name of the used readout function
     def get_definition(self):
@@ -65,24 +68,27 @@ class ReadoutFunction:
 
     # Duvenaud
     def r_duvenaud(self, h):
-        aux = torch.autograd.Variable(dtype(self.args['out']))
+        aux = torch.autograd.Variable(dtype(self.args['out']).zero_())
         # layers
         for l in range(len(h)):
             for j in h[l].keys():
-                aux += torch.mv(torch.t(self.args[l]), h[l][j])
-        return torch.squeeze(self.args['f'](aux.view(1, len(aux))))
+                aux += torch.squeeze(nn.Softmax()(torch.mv(torch.t(self.learn_args[l]), h[l][j]).view(1, len(aux))))
+
+        return torch.squeeze(self.learn_modules[0](aux.view(1, len(aux))))
 
     def init_duvenaud(self, params):
+        learn_args = []
+        learn_modules = []
         args = {}
 
         args['out'] = params['out']
 
-        args['softmax'] = torch.nn.Softmax()
         # Define a parameter matrix W for each layer.
         for l in range(params['layers']):
-            args[l] = torch.nn.Parameter(torch.randn(params['in'][l], params['out'])) #()
-        args['f'] = torch.nn.Linear(params['out'], params['target'])
-        return args
+            learn_args.append(nn.Parameter(torch.randn(params['in'][l], params['out']))) #()
+
+        learn_modules.append(nn.Linear(params['out'], params['target']))
+        return nn.ParameterList(learn_args), nn.ModuleList(learn_modules), args
 
 if __name__ == '__main__':
     # Parse optios for downloading
@@ -117,7 +123,7 @@ if __name__ == '__main__':
     g_tuple, l = data_train[0]
     g, h_t, e = g_tuple
 
-    m_v = m.M(h_t[0], h_t[1], e[list(e.keys())[0]])
+    m_v = m.forward(h_t[0], h_t[1], e[list(e.keys())[0]])
 
     in_n = len(m_v)
     out_n = 30
@@ -156,7 +162,7 @@ if __name__ == '__main__':
                 e_vw = e[(v, w)]
             else:
                 e_vw = e[(w, v)]
-            m_v = m.M(h[t-1][v], h[t-1][w], e_vw)
+            m_v = m.forward(h[t-1][v], h[t-1][w], e_vw)
             if len(m_neigh):
                 m_neigh += m_v
             else:
@@ -164,10 +170,10 @@ if __name__ == '__main__':
 
         # Duvenaud
         opt = {'deg': len(neigh)}
-        h[t][v] = u.U(h[t-1][v], m_neigh, opt)
+        h[t][v] = u.forward(h[t-1][v], m_neigh, opt)
 
     # Readout
-    res = r.R(h)
+    res = r.forward(h)
 
     end = time.time()
 

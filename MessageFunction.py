@@ -16,8 +16,10 @@ import datasets
 import numpy as np
 import os
 import argparse
-import torch
 import time
+import torch
+
+import torch.nn as nn
 
 #dtype = torch.cuda.FloatTensor
 dtype = torch.FloatTensor
@@ -26,17 +28,18 @@ __author__ = "Pau Riba, Anjan Dutta"
 __email__ = "priba@cvc.uab.cat, adutta@cvc.uab.cat" 
 
 
-class MessageFunction:
+class MessageFunction(nn.Module):
 
     # Constructor
     def __init__(self, message_def='duvenaud', args={}):
+        super(MessageFunction, self).__init__()
         self.m_definition = ''
         self.m_function = None
         self.args = {}
         self.__set_message(message_def, args)
 
     # Message from h_v to h_w through e_vw
-    def M(self, h_v, h_w, e_vw, args=None):
+    def forward(self, h_v, h_w, e_vw, args=None):
         return self.m_function(h_v, h_w, e_vw, args)
 
     # Set a message function
@@ -57,9 +60,9 @@ class MessageFunction:
             print('WARNING!: Message Function has not been set correctly\n\tIncorrect definition ' + message_def)
             quit()
 
-        self.args = {
+        self.learn_args, self.learn_modules, self.args = {
                 'duvenaud': self.init_duvenaud(args)
-            }.get(self.m_definition, {})
+            }.get(self.m_definition, (nn.ParameterList([]),nn.ModuleList([]),{}))
 
     # Get the name of the used message function
     def get_definition(self):
@@ -73,7 +76,10 @@ class MessageFunction:
         return m
 
     def init_duvenaud(self, params):
-        return {}
+        learn_args = []
+        learn_modules = []
+        args = {}
+        return learn_args, learn_modules, args
 
     # Li et al. (2016), Gated Graph Neural Networks (GG-NN)
     def m_ggnn(self, h_v, h_w, e_vw, args):
@@ -153,7 +159,7 @@ if __name__ == '__main__':
                 e_vw = e[(v, w)]
             else:
                 e_vw = e[(w, v)]
-            m_v = m.M(h_t[v], h_t[w], e_vw)
+            m_v = m.forward(h_t[v], h_t[w], e_vw)
             if len(m_neigh):
                 m_neigh += m_v
             else:

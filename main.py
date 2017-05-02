@@ -74,25 +74,29 @@ data_train = datasets.Qm9(root, train_ids)
 data_valid = datasets.Qm9(root, valid_ids)
 data_test = datasets.Qm9(root, test_ids)
 
+
 # Define model and optimizer
 class Nmp(nn.Module):
     def __init__(self, d, in_n, out, l_target):
         super(Nmp, self).__init__()
 
         # Define message 1 & 2
-        self.m = [
+        self.m = nn.ModuleList([
                 MessageFunction('duvenaud'),
                 MessageFunction('duvenaud')
-            ]
+            ])
 
         # Define Update 1 & 2
-        self.u = [
+        self.u = nn.ModuleList([
                 UpdateFunction('duvenaud', args={'deg': d, 'in': in_n, 'out': out[0]}),
-                UpdateFunction('duvenaud', args={'deg': d, 'in': out[1], 'out': out[1]})
-            ]
+                UpdateFunction('duvenaud', args={'deg': d, 'in': out[0], 'out': out[1]})
+            ])
 
         # Define Readout
-        self.r = ReadoutFunction('duvenaud', args={'layers': len(self.m)+1, 'in': [in_n, out[0], out[1]], 'out': out[2], 'target': l_target})
+        self.r = ReadoutFunction('duvenaud',
+                                 args={'layers': len(self.m) + 1, 'in': [in_n, out[0], out[1]], 'out': out[2],
+                                       'target': l_target})
+
 
     def forward(self, g_tuple):
 
@@ -113,7 +117,7 @@ class Nmp(nn.Module):
                         e_vw = e[(v, w)]
                     else:
                         e_vw = e[(w, v)]
-                    m_v = self.m[t].M(h[t][v], h[t - 1][w], e_vw)
+                    m_v = self.m[t].forward(h[t][v], h[t - 1][w], e_vw)
                     if len(m_neigh):
                         m_neigh += m_v
                     else:
@@ -121,10 +125,10 @@ class Nmp(nn.Module):
 
                 # Duvenaud
                 opt = {'deg': len(neigh)}
-                h[t+1][v] = self.u[t].U(h[t][v], m_neigh, opt)
+                h[t+1][v] = self.u[t].forward(h[t][v], m_neigh, opt)
 
         # Readout
-        return self.r.R(h)
+        return self.r.forward(h)
 
 print('Define model')
 # Select one graph
@@ -139,8 +143,8 @@ print('\tCreate model')
 model = Nmp(d, len(h_t), [25, 30, 35], len(l))
 
 print('Check cuda')
-if args.cuda:
-    model.cuda()
+# if args.cuda:
+#    model.cuda()
 
 print('Optimizer')
 optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=args.momentum)

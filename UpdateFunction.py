@@ -21,6 +21,8 @@ import os
 import argparse
 import torch
 
+import torch.nn as nn
+
 #dtype = torch.cuda.FloatTensor
 dtype = torch.FloatTensor
 
@@ -28,17 +30,18 @@ __author__ = "Pau Riba, Anjan Dutta"
 __email__ = "priba@cvc.uab.cat, adutta@cvc.uab.cat" 
 
 
-class UpdateFunction:
+class UpdateFunction(nn.Module):
 
     # Constructor
     def __init__(self, update_def='nn', args={}):
+        super(UpdateFunction, self).__init__()
         self.u_definition = ''
         self.u_function = None
         self.args = {}
         self.__set_update(update_def, args)
 
     # Update node hv given message mv
-    def U(self, h_v, m_v, opt={}):
+    def forward(self, h_v, m_v, opt={}):
         return self.u_function(h_v, m_v, opt)
 
     # Set update function
@@ -52,9 +55,9 @@ class UpdateFunction:
         if self.u_function is None:
             print('WARNING!: Update Function has not been set correctly\n\tIncorrect definition ' + update_def)
 
-        self.args = {
-                'duvenaud': self.init_duvenaud(args)
-            }.get(self.u_definition, {})
+        self.learn_args, self.learn_modules, self.args = {
+            'duvenaud': self.init_duvenaud(args)
+        }.get(self.u_definition, (nn.ParameterList([]),nn.ModuleList([]),{}))
 
     # Get the name of the used update function
     def get_definition(self):
@@ -64,17 +67,24 @@ class UpdateFunction:
 
     # Duvenaud
     def u_duvenaud(self, h_v, m_v, opt):
-        aux = torch.mv(torch.t(self.args[opt['deg']]), m_v)
-        return self.args['sigmoid'](aux)
+
+        # Find node degree
+        ind = [i for i in range(len(self.args['deg'])) if opt['deg']==self.args['deg'][i]][0]
+
+        aux = torch.mv(torch.t(self.learn_args[ind]), m_v)
+        return torch.nn.Sigmoid()(aux)
 
     def init_duvenaud(self, params):
-        args={}
-        # Define a parameter matrix H for each degree.
-        for d in params['deg']:
-            args[d] = torch.nn.Parameter(torch.randn(params['in'], params['out']))
+        learn_args = []
+        learn_modules = []
+        args = {}
 
-        args['sigmoid'] = torch.nn.Sigmoid()
-        return args
+        args['deg'] = params['deg']
+        # Define a parameter matrix H for each degree.
+        for d in range(len(params['deg'])):
+            learn_args.append(torch.nn.Parameter(torch.randn(params['in'], params['out'])))
+
+        return nn.ParameterList(learn_args), nn.ModuleList(learn_modules), args
 
 if __name__ == '__main__':
 
@@ -100,7 +110,8 @@ if __name__ == '__main__':
     data_test = datasets.Qm9(root, test_ids)
 
     print('STATS')
-    d = datasets.utils.get_graph_stats(data_test, 'degrees')
+    # d = datasets.utils.get_graph_stats(data_test, 'degrees')
+    d = [1, 2, 3, 4]
 
     print('Message')
     ## Define message
@@ -111,7 +122,7 @@ if __name__ == '__main__':
     g_tuple, l = data_train[0]
     g, h_t, e = g_tuple
 
-    m_v = m.M(h_t[0], h_t[1], e[list(e.keys())[0]])
+    m_v = m.forward(h_t[0], h_t[1], e[list(e.keys())[0]])
     in_n = len(m_v)
     out_n = 30
 
@@ -137,7 +148,7 @@ if __name__ == '__main__':
                 e_vw = e[(v, w)]
             else:
                 e_vw = e[(w, v)]
-            m_v = m.M(h_t[v], h_t[w], e_vw)
+            m_v = m.forward(h_t[v], h_t[w], e_vw)
             if len(m_neigh):
                 m_neigh += m_v
             else:
@@ -145,7 +156,7 @@ if __name__ == '__main__':
 
         # Duvenaud
         opt = {'deg': len(neigh)}
-        h_t1[v] = u.U(h_t[v], m_neigh, opt)
+        h_t1[v] = u.forward(h_t[v], m_neigh, opt)
 
     end = time.time()
 
