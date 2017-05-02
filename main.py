@@ -10,17 +10,31 @@
 
 """
 
+# Own Modules
+import datasets
+from MessageFunction import MessageFunction
+from UpdateFunction import UpdateFunction
+from ReadoutFunction import ReadoutFunction
+
+# Torch
+import torch
+import torch.optim as optim
+import torch.nn as nn
+
+import argparse
+import os
+import numpy as np
+
 __author__ = "Pau Riba, Anjan Dutta"
 __email__ = "priba@cvc.uab.cat, adutta@cvc.uab.cat"
 
-import argparse
-import torch
 
-## Argument parser
+print('Argument Parser')
+# Argument parser
 parser = argparse.ArgumentParser(description='Neural message passing')
 
-parser.add_argument('--dataset', default='MUTAG', help='MUTAG')
-parser.add_argument('--datasetPath', default='./db/mutag', help='dataset path')
+parser.add_argument('--dataset', default='qm9', help='QM9')
+parser.add_argument('--datasetPath', default=['./data/qm9/dsgdb9nsd/'], help='dataset path')
 # Optimization Options
 parser.add_argument('--batch-size', type=int, default=64, metavar='N',
                     help='Input batch size for training (default: 64)')
@@ -41,20 +55,106 @@ args = parser.parse_args()
 # Check if CUDA is enabled
 args.cuda = not args.no_cuda and torch.cuda.is_available()
 
-## TODO Load data
+# Load data
+root = args.datasetPath[0]
 
-## TODO Define model and optimizer
+print('Prepare files')
+dtype = torch.FloatTensor
 
-## TODO Train function
+files = [f for f in os.listdir(root) if os.path.isfile(os.path.join(root, f))]
+
+idx = np.random.permutation(len(files))
+idx = idx.tolist()
+
+valid_ids = [files[i] for i in idx[0:10000]]
+test_ids = [files[i] for i in idx[10000:20000]]
+train_ids = [files[i] for i in idx[20000:]]
+
+data_train = datasets.Qm9(root, train_ids)
+data_valid = datasets.Qm9(root, valid_ids)
+data_test = datasets.Qm9(root, test_ids)
+
+# Define model and optimizer
+class Nmp(nn.Module):
+    def __init__(self, d, in_n, out, l_target):
+        super(Nmp, self).__init__()
+
+        # Define message 1 & 2
+        self.m = [
+                MessageFunction('duvenaud'),
+                MessageFunction('duvenaud')
+            ]
+
+        # Define Update 1 & 2
+        self.u = [
+                UpdateFunction('duvenaud', args={'deg': d, 'in': in_n, 'out': out[0]}),
+                UpdateFunction('duvenaud', args={'deg': d, 'in': out[1], 'out': out[1]})
+            ]
+
+        # Define Readout
+        self.r = ReadoutFunction('duvenaud', args={'layers': len(self.m)+1, 'in': [in_n, out[0], out[1]], 'out': out[2], 'target': l_target})
+
+    def forward(self, g_tuple):
+
+        # Separate
+        g, h_in, e = g_tuple
+
+        h = []
+        h.append(h_in)
+
+        # Layer
+        for t in range(0, len(self.m)):
+            h.append({})
+            for v in g.nodes_iter():
+                neigh = g.neighbors(v)
+                m_neigh = dtype()
+                for w in neigh:
+                    if (v, w) in e:
+                        e_vw = e[(v, w)]
+                    else:
+                        e_vw = e[(w, v)]
+                    m_v = self.m[t].M(h[t][v], h[t - 1][w], e_vw)
+                    if len(m_neigh):
+                        m_neigh += m_v
+                    else:
+                        m_neigh = m_v
+
+                # Duvenaud
+                opt = {'deg': len(neigh)}
+                h[t+1][v] = self.u[t].U(h[t][v], m_neigh, opt)
+
+        # Readout
+        return self.r.R(h)
+
+print('Define model')
+# Select one graph
+g_tuple, l = data_train[0]
+g, h_t, e = g_tuple
+
+print('\tStatistics')
+#d = datasets.utils.get_graph_stats(data_valid, 'degrees')
+d = [1, 2, 3, 4]
+
+print('\tCreate model')
+model = Nmp(d, len(h_t), [25, 30, 35], len(l))
+
+print('Check cuda')
+if args.cuda:
+    model.cuda()
+
+print('Optimizer')
+optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=args.momentum)
+
+# TODO Train function
 def train(epoch):
 	# TODO
     pass
 
-## TODO Test function
+# TODO Test function
 def test(epoch):
 	# TODO
     pass
 
-## TODO Epoch for loop
+# TODO Epoch for loop
 for epoch in range(1, args.epochs + 1):
- pass
+    pass
