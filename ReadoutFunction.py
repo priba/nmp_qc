@@ -65,10 +65,12 @@ class ReadoutFunction:
 
     # Duvenaud
     def r_duvenaud(self, h):
-        aux = dtype(self.args['out'])        
-        for i in range(len(h)):
-            aux += args['softmax'](torch.mm(self.args[opt['deg']], h[i].values()))
-        return args['f']( aux )
+        aux = torch.autograd.Variable(dtype(self.args['out']))
+        # layers
+        for l in range(len(h)):
+            for j in h[l].keys():
+                aux += torch.mv(torch.t(self.args[l]), h[l][j])
+        return torch.squeeze(self.args['f'](aux.view(1, len(aux))))
 
     def init_duvenaud(self, params):
         args = {}
@@ -78,7 +80,7 @@ class ReadoutFunction:
         args['softmax'] = torch.nn.Softmax()
         # Define a parameter matrix W for each layer.
         for l in range(params['layers']):
-            args[l] = torch.nn.Parameter(dtype(params['in'][l], params['out']))
+            args[l] = torch.nn.Parameter(dtype(params['in'][l], params['out'])) #()
         args['f'] = torch.nn.Linear(params['out'], params['target'])
         return args
 
@@ -116,11 +118,14 @@ if __name__ == '__main__':
     g, h_t, e = g_tuple
 
     m_v = m.M(h_t[0], h_t[1], e[list(e.keys())[0]])
+
     in_n = len(m_v)
     out_n = 30
 
     ## Define Update
     u = UpdateFunction('duvenaud', args={'deg': d, 'in': in_n, 'out': out_n})
+
+    in_n = len(h_t[0])
 
     ## Define Readout
     r = ReadoutFunction('duvenaud', args={'layers': 2, 'in': [in_n, out_n], 'out': 50, 'target': len(l)})
@@ -151,7 +156,7 @@ if __name__ == '__main__':
                 e_vw = e[(v, w)]
             else:
                 e_vw = e[(w, v)]
-            m_v = m.M(h[0][v], h[0][w], e_vw)
+            m_v = m.M(h[t-1][v], h[t-1][w], e_vw)
             if len(m_neigh):
                 m_neigh += m_v
             else:
@@ -159,7 +164,7 @@ if __name__ == '__main__':
 
         # Duvenaud
         opt = {'deg': len(neigh)}
-        h[t][v] = u.U(h[0][v], m_neigh, opt)
+        h[t][v] = u.U(h[t-1][v], m_neigh, opt)
 
     # Readout
     res = r.R(h)

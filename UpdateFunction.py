@@ -64,15 +64,15 @@ class UpdateFunction:
 
     # Duvenaud
     def u_duvenaud(self, h_v, m_v, opt):
-        x = torch.autograd.Variable(torch.randn(self.args[opt['deg']].size()[1]).type(dtype))
-        torch.addmv(x, torch.t(self.args[opt['deg']]), m_v)
-        return torch.nn.Sigmoid()(x)
+        aux = torch.mv(torch.t(self.args[opt['deg']]), m_v)
+        return self.args['sigmoid'](aux)
 
     def init_duvenaud(self, params):
         args={}
         # Define a parameter matrix H for each degree.
         for d in params['deg']:
             args[d] = torch.nn.Parameter(dtype(params['in'], params['out']))
+        args['sigmoid'] = torch.nn.Sigmoid()
         return args
 
 if __name__ == '__main__':
@@ -98,9 +98,10 @@ if __name__ == '__main__':
     data_valid = datasets.Qm9(root, valid_ids)
     data_test = datasets.Qm9(root, test_ids)
 
+    print('STATS')
     d = datasets.utils.get_graph_stats(data_test, 'degrees')
 
-    print('READ')
+    print('Message')
     ## Define message
     m = MessageFunction('duvenaud')
 
@@ -113,6 +114,7 @@ if __name__ == '__main__':
     in_n = len(m_v)
     out_n = 30
 
+    print('Update')
     ## Define Update
     u = UpdateFunction('duvenaud', args={'deg': d, 'in': in_n , 'out': out_n})
 

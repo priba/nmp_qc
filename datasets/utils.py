@@ -44,7 +44,7 @@ def qm9_nodes(g, hydrogen=False):
         # If number hydrogen is used as a
         if hydrogen:
             h_t.append(d['num_h'])
-        h[n] = dtype(h_t)
+        h[n] = torch.autograd.Variable(dtype(h_t))
     return h
 
 
@@ -86,11 +86,12 @@ def qm9_edges(g, e_representation='chem_graph'):
             print('Incorrect Edge representation transform')
             quit()
         if e_t:
-            e[(n1, n2)] = dtype(e_t)
+            e[(n1, n2)] = torch.autograd.Variable(dtype(e_t))
     for edg in remove_edges:
         g.remove_edge(*edg)
     return g, e
-    
+
+
 def degree_values(obj, start, end):
     degs = []
     for i in range(start, end):
