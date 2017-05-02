@@ -80,7 +80,7 @@ class ReadoutFunction:
         args['softmax'] = torch.nn.Softmax()
         # Define a parameter matrix W for each layer.
         for l in range(params['layers']):
-            args[l] = torch.nn.Parameter(dtype(params['in'][l], params['out'])) #()
+            args[l] = torch.nn.Parameter(torch.randn(params['in'][l], params['out'])) #()
         args['f'] = torch.nn.Linear(params['out'], params['target'])
         return args
 

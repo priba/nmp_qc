@@ -71,7 +71,8 @@ class UpdateFunction:
         args={}
         # Define a parameter matrix H for each degree.
         for d in params['deg']:
-            args[d] = torch.nn.Parameter(dtype(params['in'], params['out']))
+            args[d] = torch.nn.Parameter(torch.randn(params['in'], params['out']))
+
         args['sigmoid'] = torch.nn.Sigmoid()
         return args
 
