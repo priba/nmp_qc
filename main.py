@@ -117,7 +117,7 @@ class Nmp(nn.Module):
                         e_vw = e[(v, w)]
                     else:
                         e_vw = e[(w, v)]
-                    m_v = self.m[t].forward(h[t][v], h[t - 1][w], e_vw)
+                    m_v = self.m[t].forward(h[t][v], h[t][w], e_vw)
                     if len(m_neigh):
                         m_neigh += m_v
                     else:
@@ -141,6 +141,7 @@ d = [1, 2, 3, 4]
 
 print('\tCreate model')
 model = Nmp(d, len(h_t), [25, 30, 35], len(l))
+model(g_tuple)
 
 print('Check cuda')
 # if args.cuda:
