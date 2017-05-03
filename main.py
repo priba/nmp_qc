@@ -17,6 +17,8 @@ from models.model import Nmp
 # Torch
 import torch
 import torch.optim as optim
+import torch.nn as nn
+from torch.autograd import Variable
 
 import argparse
 import os
@@ -32,12 +34,12 @@ parser = argparse.ArgumentParser(description='Neural message passing')
 parser.add_argument('--dataset', default='qm9', help='QM9')
 parser.add_argument('--datasetPath', default=['./data/qm9/dsgdb9nsd/'], help='dataset path')
 # Optimization Options
-parser.add_argument('--batch-size', type=int, default=64, metavar='N',
-                    help='Input batch size for training (default: 64)')
+parser.add_argument('--batch-size', type=int, default=20, metavar='N',
+                    help='Input batch size for training (default: 20)')
 parser.add_argument('--no-cuda', action='store_true', default=False,
                     help='Enables CUDA training')
-parser.add_argument('--epochs', type=int, default=10, metavar='N',
-                    help='Number of epochs to train (default: 10)')
+parser.add_argument('--epochs', type=int, default=360, metavar='N',
+                    help='Number of epochs to train (default: 360)')
 parser.add_argument('--lr', type=float, default=0.01, metavar='LR',
                     help='Learning rate (default: 0.01)')
 parser.add_argument('--momentum', type=float, default=0.5, metavar='M',
@@ -46,6 +48,7 @@ parser.add_argument('--momentum', type=float, default=0.5, metavar='M',
 parser.add_argument('--log-interval', type=int, default=10, metavar='N',
                     help='How many batches to wait before logging training status')
 
+dtype = torch.FloatTensor
 
 def main():
     global args
@@ -85,27 +88,44 @@ def main():
     model = Nmp(d, [len(h_t.values()[0]), len(e.values()[0])], [25, 30, 35], len(l))
 
     print('Check cuda')
-    if args.cuda:
-        model.cuda()
+    #if args.cuda:
+    #    model.cuda()
 
     print('Optimizer')
     optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=args.momentum)
+    criterion = nn.MSELoss()
 
     # TODO Epoch for loop
     for epoch in range(1, args.epochs + 1):
-        train(epoch)
+        # train for one epoch
+        train(data_train, model, criterion, optimizer, epoch)
 
 
 # TODO Train function
-def train(train_loader, model, criterion, optimixer, epoch):
+def train(data_train, model, criterion, optimizer, epoch):
     # switch to train mode
     model.train()
+    train_loss = Variable(torch.zeros(1, 1))
+    for i, (g_tuple, target) in enumerate(data_train):
 
+        target_var = torch.autograd.Variable(dtype(target))
+
+        # compute output
+        output = model(g_tuple)
+        train_loss += criterion(output, target_var)
+
+        # compute gradient and do SGD step
+        optimizer.zero_grad()
+        train_loss.backward()
+        optimizer.step()
 
 # TODO
 def validate(val_loader, model, criterion):
     # switch to evaluate mode
     model.eval()
+
+
+# TODO Evaluation functions
 
 if __name__ == '__main__':
     main()

@@ -36,8 +36,7 @@ class Nmp(nn.Module):
 
     def forward(self, g_tuple):
 
-        # Separate
-        g, h_in, e = g_tuple
+        g, h_in, e_in = g_tuple
 
         h = []
         h.append(h_in)
