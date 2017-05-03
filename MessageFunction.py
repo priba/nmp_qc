@@ -64,16 +64,27 @@ class MessageFunction(nn.Module):
                 'duvenaud': self.init_duvenaud(args)
             }.get(self.m_definition, (nn.ParameterList([]),nn.ModuleList([]),{}))
 
+        self.m_size = {
+                'duvenaud': self.out_duvenaud
+            }.get(self.m_definition, None)
+
     # Get the name of the used message function
     def get_definition(self):
         return self.m_definition
+
+    # Get Output size
+    def get_out_size(self, size_h, size_e, args=None):
+        return self.m_size(size_h, size_e, args)
 
     ## Definition of various state of the art message functions
     
     # Duvenaud et al. (2015), Convolutional Networks for Learning Molecular Fingerprints
     def m_duvenaud(self, h_v, h_w, e_vw, args):
-        m = torch.cat([h_w, e_vw] , 0).type(dtype)
+        m = torch.cat([h_w, e_vw], 0).type(dtype)
         return m
+
+    def out_duvenaud(self, size_h, size_e, args):
+        return size_h + size_e
 
     def init_duvenaud(self, params):
         learn_args = []

@@ -88,13 +88,13 @@ class Nmp(nn.Module):
 
         # Define Update 1 & 2
         self.u = nn.ModuleList([
-                UpdateFunction('duvenaud', args={'deg': d, 'in': in_n, 'out': out[0]}),
-                UpdateFunction('duvenaud', args={'deg': d, 'in': out[0], 'out': out[1]})
+                UpdateFunction('duvenaud', args={'deg': d, 'in': self.m[0].get_out_size(in_n[0], in_n[1]), 'out': out[0]}),
+                UpdateFunction('duvenaud', args={'deg': d, 'in': self.m[0].get_out_size(out[0], in_n[1]), 'out': out[1]})
             ])
 
         # Define Readout
         self.r = ReadoutFunction('duvenaud',
-                                 args={'layers': len(self.m) + 1, 'in': [in_n, out[0], out[1]], 'out': out[2],
+                                 args={'layers': len(self.m) + 1, 'in': [in_n[0], out[0], out[1]], 'out': out[2],
                                        'target': l_target})
 
 
@@ -136,16 +136,15 @@ g_tuple, l = data_train[0]
 g, h_t, e = g_tuple
 
 print('\tStatistics')
-#d = datasets.utils.get_graph_stats(data_valid, 'degrees')
+#statDict = datasets.utils.get_graph_stats(data_valid, ['degrees', 'mean', 'std'])
 d = [1, 2, 3, 4]
 
 print('\tCreate model')
-model = Nmp(d, len(h_t), [25, 30, 35], len(l))
-model(g_tuple)
+model = Nmp(d, [len(h_t.values()[0]), len(e.values()[0])], [25, 30, 35], len(l))
 
 print('Check cuda')
-# if args.cuda:
-#    model.cuda()
+if args.cuda:
+    model.cuda()
 
 print('Optimizer')
 optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=args.momentum)
