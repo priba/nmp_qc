@@ -95,6 +95,11 @@ def qm9_edges(g, e_representation='chem_graph'):
     return g, e
 
 
+def normalize_data(data, mean, std):
+    data_norm = (data-mean)/std
+    return data_norm
+
+
 def get_values(obj, start, end, prop):
     vals = []
     for i in range(start, end):

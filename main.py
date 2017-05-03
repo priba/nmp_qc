@@ -42,10 +42,10 @@ parser.add_argument('--no-cuda', action='store_true', default=False,
                     help='Enables CUDA training')
 parser.add_argument('--epochs', type=int, default=360, metavar='N',
                     help='Number of epochs to train (default: 360)')
-parser.add_argument('--lr', type=float, default=0.01, metavar='LR',
-                    help='Learning rate (default: 0.01)')
-parser.add_argument('--momentum', type=float, default=0.5, metavar='M',
-                    help='SGD momentum (default: 0.5)')
+parser.add_argument('--lr', type=float, default=1e-4, metavar='LR',
+                    help='Learning rate (default: 1e-4)')
+parser.add_argument('--momentum', type=float, default=0.9, metavar='M',
+                    help='SGD momentum (default: 0.9)')
 # i/o
 parser.add_argument('--log-interval', type=int, default=10, metavar='N',
                     help='How many batches to wait before logging training status')
@@ -76,10 +76,6 @@ def main():
     data_valid = datasets.Qm9(root, valid_ids)
     data_test = datasets.Qm9(root, test_ids)
 
-    train_loader = torch.utils.data.DataLoader(
-        data_train,
-        batch_size=20, shuffle=True,collate_fn=datasets.utils.collate_g)
-
     # Define model and optimizer
     print('Define model')
     # Select one graph
@@ -87,10 +83,25 @@ def main():
     g, h_t, e = g_tuple
 
     print('\tStatistics')
-    statDict = datasets.utils.get_graph_stats(data_valid, ['degrees', 'target_mean', 'target_std'])
+    stat_dict = datasets.utils.get_graph_stats(data_valid, ['degrees', 'target_mean', 'target_std'])
+
+    data_train.set_target_transform(lambda x: datasets.utils.normalize_data(x,stat_dict['target_mean'],
+                                                                            stat_dict['target_std']))
+    data_valid.set_target_transform(lambda x: datasets.utils.normalize_data(x, stat_dict['target_mean'],
+                                                                            stat_dict['target_std']))
+    data_test.set_target_transform(lambda x: datasets.utils.normalize_data(x, stat_dict['target_mean'],
+                                                                            stat_dict['target_std']))
+
+    # Data Loader
+    train_loader = torch.utils.data.DataLoader(data_train,
+                                               batch_size=20, shuffle=True, collate_fn=datasets.utils.collate_g)
+    valid_loader = torch.utils.data.DataLoader(data_valid,
+                                               batch_size=20, shuffle=True, collate_fn=datasets.utils.collate_g)
+    test_loader = torch.utils.data.DataLoader(data_test,
+                                               batch_size=20, shuffle=True, collate_fn=datasets.utils.collate_g)
 
     print('\tCreate model')
-    model = Nmp(statDict['degrees'], [len(h_t.values()[0]), len(e.values()[0])], [25, 30, 35], len(l))
+    model = Nmp(stat_dict['degrees'], [len(h_t.values()[0]), len(e.values()[0])], [25, 30, 35], len(l))
 
     print('Check cuda')
     #if args.cuda:

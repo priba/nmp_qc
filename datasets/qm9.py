@@ -32,11 +32,13 @@ __email__ = "priba@cvc.uab.cat, adutta@cvc.uab.cat"
 class Qm9(data.Dataset):
 
     # Constructor
-    def __init__(self, root_path, ids, vertex_transform=utils.qm9_nodes, edge_transform=utils.qm9_edges):
+    def __init__(self, root_path, ids, vertex_transform=utils.qm9_nodes, edge_transform=utils.qm9_edges,
+                 target_transform=None):
         self.root = root_path
         self.ids = ids
         self.vertex_transform = vertex_transform
         self.edge_transform = edge_transform
+        self.target_transform = target_transform
 
     def __getitem__(self, index):
         g, target = xyz_graph_reader(os.path.join(self.root, self.ids[index]))
@@ -44,10 +46,15 @@ class Qm9(data.Dataset):
             h = self.vertex_transform(g)
         if self.edge_transform is not None:
             g, e = self.edge_transform(g)
+        if self.target_transform is not None:
+            target = self.target_transform(target)
         return (g, h, e), target
 
     def __len__(self):
         return len(self.ids)
+
+    def set_target_transform(self, target_transform):
+        self.target_transform = target_transform
 
 if __name__ == '__main__':
 
