@@ -13,7 +13,7 @@ def error_ratio(pred, target):
     if type(target) is not np.ndarray:
         target = np.array(target)       
         
-    return np.mean(np.divide(np.abs(pred - target), target))
+    return np.mean(np.divide(np.abs(pred - target), np.abs(target)))
 
 
 class AverageMeter(object):

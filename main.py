@@ -103,7 +103,7 @@ def main():
                                                batch_size=20, shuffle=True, collate_fn=datasets.utils.collate_g)
 
     print('\tCreate model')
-    model = Nmp(stat_dict['degrees'], [len(h_t.values()[0]), len(e.values()[0])], [25, 30, 35], len(l))
+    model = Nmp(stat_dict['degrees'], [len(list(h_t.values())[0]), len(list(e.values())[0])], [25, 30, 35], len(l))
 
     print('Check cuda')
     #if args.cuda:
