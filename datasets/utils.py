@@ -96,7 +96,7 @@ def qm9_edges(g, e_representation='chem_graph'):
 
 
 def normalize_data(data, mean, std):
-    data_norm = (data-mean)/std
+    data_norm = (data-mean)/pow(std,2)
     return data_norm
 
 

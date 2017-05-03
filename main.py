@@ -35,7 +35,7 @@ __email__ = "priba@cvc.uab.cat, adutta@cvc.uab.cat"
 parser = argparse.ArgumentParser(description='Neural message passing')
 
 parser.add_argument('--dataset', default='qm9', help='QM9')
-parser.add_argument('--datasetPath', default=['./data/qm9/dsgdb9nsd/'], help='dataset path')
+parser.add_argument('--datasetPath', default='./data/qm9/dsgdb9nsd/', help='dataset path')
 # Optimization Options
 parser.add_argument('--batch-size', type=int, default=20, metavar='N',
                     help='Input batch size for training (default: 20)')
@@ -61,7 +61,7 @@ def main():
     args.cuda = not args.no_cuda and torch.cuda.is_available()
 
     # Load data
-    root = args.datasetPath[0]
+    root = args.datasetPath
 
     print('Prepare files')
     files = [f for f in os.listdir(root) if os.path.isfile(os.path.join(root, f))]
