@@ -17,6 +17,8 @@ from multiprocessing import Pool
 import multiprocessing
 from torch.autograd import Variable
 
+import numpy as np
+
 #dtype = torch.cuda.FloatTensor
 dtype = torch.FloatTensor
 
@@ -93,27 +95,38 @@ def qm9_edges(g, e_representation='chem_graph'):
     return g, e
 
 
-def degree_values(obj, start, end):
-    degs = []
+def get_values(obj, start, end, prop):
+    vals = []
     for i in range(start, end):
-        degs += set(list(obj[i][0][0].degree().values()))
-    return list(degs)
+        v = {}
+        if 'degrees' in prop:
+            v['degrees'] = set(list(obj[i][0][0].degree().values()))
+        if 'target_mean' in prop or 'target_std' in prop:
+            v['params'] = obj[i][1]
+        vals.append(v)
+    return vals
 
 
 def get_graph_stats(graph_obj_handle, prop='degrees'):
-    if prop == 'degrees':
-        num_cores = multiprocessing.cpu_count()
-        inputs = [int(i*len(graph_obj_handle)/num_cores) for i in range(num_cores) ] +[ len(graph_obj_handle)]
-        res = Parallel(n_jobs = num_cores)(delayed(degree_values)(graph_obj_handle, inputs[i], inputs[i+1]) for i in range(num_cores))
+    # if prop == 'degrees':
+    num_cores = multiprocessing.cpu_count()
+    inputs = [int(i*len(graph_obj_handle)/num_cores) for i in range(num_cores) ] +[ len(graph_obj_handle)]
+    res = Parallel(n_jobs = num_cores)(delayed(get_values)(graph_obj_handle, inputs[i], inputs[i+1], prop) for i in range(num_cores))
 
-    return list(set([j for i in res for j in i]))
+    stat_dict = {}
+
+    if 'degrees' in prop:
+        stat_dict['degrees'] = list(set([d for core_res in res for file_res in core_res for d in file_res['degrees']]))
+
+    if 'target_mean' in prop or 'target_std' in prop:
+        param = np.array([file_res['params'] for core_res in res for file_res in core_res])
+    if 'target_mean' in prop:
+        stat_dict['target_mean'] = np.mean(param, axis=0)
+    if 'target_std' in prop:
+        stat_dict['target_std'] = np.std(param, axis=0)
+
+    return stat_dict
+
 
 def collate_g(batch):
     return batch
-    # b_graphs = []
-    # b_targets = []
-    # for b in batch:
-    #     b_graphs.append(b[0])
-    #     b_targets.append(b[1])
-
-    # return b_graphs, b_targets

@@ -87,11 +87,10 @@ def main():
     g, h_t, e = g_tuple
 
     print('\tStatistics')
-    #statDict = datasets.utils.get_graph_stats(data_valid, ['degrees', 'mean', 'std'])
-    d = [1, 2, 3, 4]
+    statDict = datasets.utils.get_graph_stats(data_valid, ['degrees', 'target_mean', 'target_std'])
 
     print('\tCreate model')
-    model = Nmp(d, [len(h_t.values()[0]), len(e.values()[0])], [25, 30, 35], len(l))
+    model = Nmp(statDict['degrees'], [len(h_t.values()[0]), len(e.values()[0])], [25, 30, 35], len(l))
 
     print('Check cuda')
     #if args.cuda:
