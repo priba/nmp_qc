@@ -13,6 +13,7 @@
 # Own Modules
 import datasets
 from models.model import Nmp
+import LogMetric
 from LogMetric import AverageMeter
 
 # Torch
@@ -122,6 +123,7 @@ def train(train_loader, model, criterion, optimizer, epoch):
     batch_time = AverageMeter()
     data_time = AverageMeter()
     losses = AverageMeter()
+    error_ratio = AverageMeter()
 
     # switch to train mode
     model.train()
@@ -142,7 +144,10 @@ def train(train_loader, model, criterion, optimizer, epoch):
             output = model(input_var)
             loss = criterion(output, target_var)
             train_loss += loss
+
+            # Logs
             losses.update(loss.data[0])
+            error_ratio.update(LogMetric.error_ratio(output.data.numpy(), target))
 
         # compute gradient and do SGD step
         optimizer.zero_grad()
@@ -157,9 +162,10 @@ def train(train_loader, model, criterion, optimizer, epoch):
             print('Epoch: [{0}][{1}/{2}]\t'
                   'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
                   'Data {data_time.val:.3f} ({data_time.avg:.3f})\t'
-                  'Loss {loss.val:.4f} ({loss.avg:.4f})'
+                  'Loss {loss.val:.4f} ({loss.avg:.4f})\t'
+                  'Error Ratio {err.val:.4f} ({err.avg:.4f})'
                   .format(epoch, i, len(train_loader), batch_time=batch_time,
-                          data_time=data_time, loss=losses))
+                          data_time=data_time, loss=losses, err=error_ratio))
 
 # TODO
 def validate(val_loader, model, criterion):
