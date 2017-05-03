@@ -13,6 +13,7 @@
 # Own Modules
 import datasets
 from models.model import Nmp
+from LogMetric import AverageMeter
 
 # Torch
 import torch
@@ -20,6 +21,7 @@ import torch.optim as optim
 import torch.nn as nn
 from torch.autograd import Variable
 
+import time
 import argparse
 import os
 import numpy as np
@@ -107,10 +109,19 @@ def main():
 
 # TODO Train function
 def train(train_loader, model, criterion, optimizer, epoch):
+    batch_time = AverageMeter()
+    data_time = AverageMeter()
+    losses = AverageMeter()
+
     # switch to train mode
     model.train()
 
+    end = time.time()
     for i, batch in enumerate(train_loader):
+
+        # measure data loading time
+        data_time.update(time.time() - end)
+
         train_loss = Variable(torch.zeros(1, 1))
 
         # Iterate batch
@@ -119,12 +130,26 @@ def train(train_loader, model, criterion, optimizer, epoch):
 
             # compute output
             output = model(input_var)
-            train_loss += criterion(output, target_var)
+            loss = criterion(output, target_var)
+            train_loss += loss
+            losses.update(loss.data[0])
 
         # compute gradient and do SGD step
         optimizer.zero_grad()
         train_loss.backward()
         optimizer.step()
+
+        # measure elapsed time
+        batch_time.update(time.time() - end)
+        end = time.time()
+
+        if i % args.log_interval == 0:
+            print('Epoch: [{0}][{1}/{2}]\t'
+                  'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
+                  'Data {data_time.val:.3f} ({data_time.avg:.3f})\t'
+                  'Loss {loss.val:.4f} ({loss.avg:.4f})'
+                  .format(epoch, i, len(train_loader), batch_time=batch_time,
+                          data_time=data_time, loss=losses))
 
 # TODO
 def validate(val_loader, model, criterion):
