@@ -74,6 +74,10 @@ def main():
     data_valid = datasets.Qm9(root, valid_ids)
     data_test = datasets.Qm9(root, test_ids)
 
+    train_loader = torch.utils.data.DataLoader(
+        data_train,
+        batch_size=20, shuffle=True,collate_fn=datasets.utils.collate_g)
+
     # Define model and optimizer
     print('Define model')
     # Select one graph
@@ -98,21 +102,24 @@ def main():
     # TODO Epoch for loop
     for epoch in range(1, args.epochs + 1):
         # train for one epoch
-        train(data_train, model, criterion, optimizer, epoch)
+        train(train_loader, model, criterion, optimizer, epoch)
 
 
 # TODO Train function
-def train(data_train, model, criterion, optimizer, epoch):
+def train(train_loader, model, criterion, optimizer, epoch):
     # switch to train mode
     model.train()
-    train_loss = Variable(torch.zeros(1, 1))
-    for i, (g_tuple, target) in enumerate(data_train):
 
-        target_var = torch.autograd.Variable(dtype(target))
+    for i, batch in enumerate(train_loader):
+        train_loss = Variable(torch.zeros(1, 1))
 
-        # compute output
-        output = model(g_tuple)
-        train_loss += criterion(output, target_var)
+        # Iterate batch
+        for (input_var, target) in batch:
+            target_var = torch.autograd.Variable(dtype(target))
+
+            # compute output
+            output = model(input_var)
+            train_loss += criterion(output, target_var)
 
         # compute gradient and do SGD step
         optimizer.zero_grad()

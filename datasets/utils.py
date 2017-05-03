@@ -15,6 +15,7 @@ import torch
 from joblib import Parallel, delayed
 from multiprocessing import Pool
 import multiprocessing
+from torch.autograd import Variable
 
 #dtype = torch.cuda.FloatTensor
 dtype = torch.FloatTensor
@@ -44,7 +45,7 @@ def qm9_nodes(g, hydrogen=False):
         # If number hydrogen is used as a
         if hydrogen:
             h_t.append(d['num_h'])
-        h[n] = torch.autograd.Variable(dtype(h_t))
+        h[n] = Variable(dtype(h_t))
     return h
 
 
@@ -86,7 +87,7 @@ def qm9_edges(g, e_representation='chem_graph'):
             print('Incorrect Edge representation transform')
             quit()
         if e_t:
-            e[(n1, n2)] = torch.autograd.Variable(dtype(e_t))
+            e[(n1, n2)] = Variable(dtype(e_t))
     for edg in remove_edges:
         g.remove_edge(*edg)
     return g, e
@@ -106,3 +107,13 @@ def get_graph_stats(graph_obj_handle, prop='degrees'):
         res = Parallel(n_jobs = num_cores)(delayed(degree_values)(graph_obj_handle, inputs[i], inputs[i+1]) for i in range(num_cores))
 
     return list(set([j for i in res for j in i]))
+
+def collate_g(batch):
+    return batch
+    # b_graphs = []
+    # b_targets = []
+    # for b in batch:
+    #     b_graphs.append(b[0])
+    #     b_targets.append(b[1])
+
+    # return b_graphs, b_targets

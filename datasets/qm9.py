@@ -18,6 +18,8 @@ import datasets.utils as utils
 import time
 import os,sys
 
+import torch
+
 reader_folder = os.path.realpath( os.path.abspath('../GraphReader'))
 if reader_folder not in sys.path:
     sys.path.insert(1, reader_folder)
