@@ -53,6 +53,7 @@ parser.add_argument('--log-interval', type=int, default=10, metavar='N',
 
 dtype = torch.FloatTensor
 
+
 def main():
     global args
     args = parser.parse_args()
@@ -112,13 +113,15 @@ def main():
     optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=args.momentum)
     criterion = nn.MSELoss()
 
-    # TODO Epoch for loop
+    # Epoch for loop
     for epoch in range(1, args.epochs + 1):
         # train for one epoch
         train(train_loader, model, criterion, optimizer, epoch)
 
+        # evaluate on validation set
+        validate(valid_loader, model, criterion)
 
-# TODO Train function
+
 def train(train_loader, model, criterion, optimizer, epoch):
     batch_time = AverageMeter()
     data_time = AverageMeter()
@@ -167,13 +170,49 @@ def train(train_loader, model, criterion, optimizer, epoch):
                   .format(epoch, i, len(train_loader), batch_time=batch_time,
                           data_time=data_time, loss=losses, err=error_ratio))
 
+
 # TODO
 def validate(val_loader, model, criterion):
+    batch_time = AverageMeter()
+    losses = AverageMeter()
+    error_ratio = AverageMeter()
+
     # switch to evaluate mode
     model.eval()
 
+    end = time.time()
+    for i, batch in enumerate(val_loader):
 
-# TODO Evaluation functions
+        train_loss = Variable(torch.zeros(1, 1))
+
+        # Iterate batch
+        for (input_var, target) in batch:
+            target_var = torch.autograd.Variable(dtype(target))
+
+            # compute output
+            output = model(input_var)
+            loss = criterion(output, target_var)
+            train_loss += loss
+
+            # Logs
+            losses.update(loss.data[0])
+            error_ratio.update(LogMetric.error_ratio(output.data.numpy(), target))
+
+        # measure elapsed time
+        batch_time.update(time.time() - end)
+        end = time.time()
+
+        if i % args.log_interval == 0:
+            print('Test: [{0}][{1}/{2}]\t'
+                  'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
+                  'Loss {loss.val:.4f} ({loss.avg:.4f})\t'
+                  'Error Ratio {err.val:.4f} ({err.avg:.4f})'
+                  .format(i, len(val_loader), batch_time=batch_time,
+                          loss=losses, err=error_ratio))
+
+    print(' * Average Error Ratio {err.avg:.3f}'
+          .format(err=error_ratio))
+
 
 if __name__ == '__main__':
     main()
