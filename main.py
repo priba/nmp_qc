@@ -14,7 +14,7 @@
 import datasets
 from models.model import Nmp
 import LogMetric
-from LogMetric import AverageMeter
+from LogMetric import AverageMeter, Logger
 
 # Torch
 import torch
@@ -43,6 +43,7 @@ parser = argparse.ArgumentParser(description='Neural message passing')
 
 parser.add_argument('--dataset', default='qm9', help='QM9')
 parser.add_argument('--datasetPath', default='./data/qm9/dsgdb9nsd/', help='dataset path')
+parser.add_argument('--logPath', default='./log/', help='log path')
 # Optimization Options
 parser.add_argument('--batch-size', type=int, default=20, metavar='N',
                     help='Input batch size for training (default: 20)')
@@ -121,6 +122,9 @@ def main():
     print('Optimizer')
     optimizer = optim.Adam(model.parameters(), lr=args.lr)
     criterion = nn.MSELoss()
+    
+    print('Logger')
+    logger = Logger(args.logPath)    
 
     # Epoch for loop
     for epoch in range(1, args.epochs + 1):
@@ -130,13 +134,13 @@ def main():
                 param_group['lr'] = state['learning_rate']
 
         # train for one epoch
-        train(train_loader, model, criterion, optimizer, epoch)
+        train(train_loader, model, criterion, optimizer, epoch, logger)
 
         # evaluate on validation set
-        validate(valid_loader, model, criterion)
+        validate(valid_loader, model, criterion, logger)
 
 
-def train(train_loader, model, criterion, optimizer, epoch):
+def train(train_loader, model, criterion, optimizer, epoch, logger):
     batch_time = AverageMeter()
     data_time = AverageMeter()
     losses = AverageMeter()
@@ -161,10 +165,10 @@ def train(train_loader, model, criterion, optimizer, epoch):
             output = model(input_var)
             loss = criterion(output, target_var)
             train_loss += loss
-
-            # Logs
-            losses.update(loss.data[0])
-            error_ratio.update(LogMetric.error_ratio(output.data.numpy(), target))
+            
+            # Logs            
+            losses.update(loss.data[0])            
+            error_ratio.update(LogMetric.error_ratio(output.data.numpy(), target))            
 
         # compute gradient and do SGD step
         optimizer.zero_grad()
@@ -176,6 +180,9 @@ def train(train_loader, model, criterion, optimizer, epoch):
         end = time.time()
 
         if i % args.log_interval == 0:
+            logger.log_value('loss', losses.val).step()
+            logger.log_value('error_ratio', error_ratio.val).step()
+            
             print('Epoch: [{0}][{1}/{2}]\t'
                   'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
                   'Data {data_time.val:.3f} ({data_time.avg:.3f})\t'
@@ -185,7 +192,7 @@ def train(train_loader, model, criterion, optimizer, epoch):
                           data_time=data_time, loss=losses, err=error_ratio))
 
 
-def validate(val_loader, model, criterion):
+def validate(val_loader, model, criterion, logger):
     batch_time = AverageMeter()
     losses = AverageMeter()
     error_ratio = AverageMeter()
@@ -216,6 +223,9 @@ def validate(val_loader, model, criterion):
         end = time.time()
 
         if i % args.log_interval == 0:
+            logger.log_value('loss', losses.val).step()
+            logger.log_value('error_ratio', error_ratio.val).step()
+            
             print('Test: [{0}/{1}]\t'
                   'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
                   'Loss {loss.val:.4f} ({loss.avg:.4f})\t'
@@ -225,7 +235,6 @@ def validate(val_loader, model, criterion):
 
     print(' * Average Error Ratio {err.avg:.3f}'
           .format(err=error_ratio))
-
-
+    
 if __name__ == '__main__':
     main()
