@@ -31,6 +31,13 @@ __author__ = "Pau Riba, Anjan Dutta"
 __email__ = "priba@cvc.uab.cat, adutta@cvc.uab.cat"
 
 
+# Parser check
+def restricted_float(x):
+    x = float(x)
+    if x < 1e-5 or x > 5e-4:
+        raise argparse.ArgumentTypeError("%r not in range [1e-5, 1e-4]"%(x,))
+    return x
+
 # Argument parser
 parser = argparse.ArgumentParser(description='Neural message passing')
 
@@ -43,8 +50,10 @@ parser.add_argument('--no-cuda', action='store_true', default=False,
                     help='Enables CUDA training')
 parser.add_argument('--epochs', type=int, default=360, metavar='N',
                     help='Number of epochs to train (default: 360)')
-parser.add_argument('--lr', type=float, default=1e-4, metavar='LR',
-                    help='Learning rate (default: 1e-4)')
+parser.add_argument('--lr', type=restricted_float, default=1e-4, metavar='LR',
+                    help='Initial learning rate [1e-5, 5e-4] (default: 1e-4)')
+parser.add_argument('--lr-decay', type=restricted_float, default=0.6, metavar='LR-DECAY',
+                    help='Learning rate decay factor [.01, 1] (default: 0.6)')
 parser.add_argument('--momentum', type=float, default=0.9, metavar='M',
                     help='SGD momentum (default: 0.9)')
 # i/o
@@ -110,11 +119,15 @@ def main():
     #    model.cuda()
 
     print('Optimizer')
-    optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=args.momentum)
+    optimizer = optim.Adam(model.parameters(), lr=args.lr)
     criterion = nn.MSELoss()
 
     # Epoch for loop
     for epoch in range(1, args.epochs + 1):
+        if epoch in args.schedule:
+            state['learning_rate'] *= args.gamma
+            for param_group in optimizer.param_groups:
+                param_group['lr'] = state['learning_rate']
 
         # train for one epoch
         train(train_loader, model, criterion, optimizer, epoch)

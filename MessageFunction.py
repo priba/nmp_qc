@@ -76,7 +76,7 @@ class MessageFunction(nn.Module):
     def get_out_size(self, size_h, size_e, args=None):
         return self.m_size(size_h, size_e, args)
 
-    ## Definition of various state of the art message functions
+    # Definition of various state of the art message functions
     
     # Duvenaud et al. (2015), Convolutional Networks for Learning Molecular Fingerprints
     def m_duvenaud(self, h_v, h_w, e_vw, args):

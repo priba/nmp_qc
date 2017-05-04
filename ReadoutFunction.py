@@ -85,7 +85,7 @@ class ReadoutFunction(nn.Module):
 
         # Define a parameter matrix W for each layer.
         for l in range(params['layers']):
-            learn_args.append(nn.Parameter(torch.randn(params['in'][l], params['out']))) #()
+            learn_args.append(nn.Parameter(torch.randn(params['in'][l], params['out'])))
 
         learn_modules.append(nn.Linear(params['out'], params['target']))
         return nn.ParameterList(learn_args), nn.ModuleList(learn_modules), args
