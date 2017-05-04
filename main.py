@@ -115,6 +115,7 @@ def main():
 
     # Epoch for loop
     for epoch in range(1, args.epochs + 1):
+
         # train for one epoch
         train(train_loader, model, criterion, optimizer, epoch)
 
@@ -171,7 +172,6 @@ def train(train_loader, model, criterion, optimizer, epoch):
                           data_time=data_time, loss=losses, err=error_ratio))
 
 
-# TODO
 def validate(val_loader, model, criterion):
     batch_time = AverageMeter()
     losses = AverageMeter()
@@ -203,7 +203,7 @@ def validate(val_loader, model, criterion):
         end = time.time()
 
         if i % args.log_interval == 0:
-            print('Test: [{0}][{1}/{2}]\t'
+            print('Test: [{0}/{1}]\t'
                   'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
                   'Loss {loss.val:.4f} ({loss.avg:.4f})\t'
                   'Error Ratio {err.val:.4f} ({err.avg:.4f})'
