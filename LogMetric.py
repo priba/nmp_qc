@@ -34,7 +34,8 @@ class AverageMeter(object):
         self.sum += val * n
         self.count += n
         self.avg = self.sum / self.count
-        
+
+
 class Logger(object):
     def __init__(self, log_dir):
         if not os.path.isdir(log_dir):
