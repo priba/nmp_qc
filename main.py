@@ -157,7 +157,7 @@ def main():
         train(train_loader, model, criterion, optimizer, epoch, evaluation, logger)
 
         # evaluate on validation set
-        validate(valid_loader, model, criterion, logger)
+        validate(valid_loader, model, criterion, evaluation, logger)
 
 
 def train(train_loader, model, criterion, optimizer, epoch, evaluation, logger):
@@ -221,7 +221,7 @@ def train(train_loader, model, criterion, optimizer, epoch, evaluation, logger):
     logger.log_value('train_epoch_error_ratio', error_ratio.avg)
 
 
-def validate(val_loader, model, criterion, logger):
+def validate(val_loader, model, criterion, evaluation, logger):
     batch_time = AverageMeter()
     losses = AverageMeter()
     error_ratio = AverageMeter()
@@ -232,20 +232,22 @@ def validate(val_loader, model, criterion, logger):
     end = time.time()
     for i, batch in enumerate(val_loader):
 
-        train_loss = Variable(torch.zeros(1, 1))
-
         # Iterate batch
         for (input_var, target) in batch:
-            target_var = torch.autograd.Variable(torch.from_numpy(target))
 
-            # compute output
-            output = model(input_var)
-            loss = criterion(output, target_var)
-            train_loss += loss
+            # Prepare input
+            target_var = Variable(target.cuda())
+
+            g, h_in, e = input_var
+            h_in = Variable(h_in.cuda())
+            e = {k: Variable(v.cuda()) for k, v in e.items()}
+
+            # Compute output
+            output = model(g, h_in, e)
 
             # Logs
-            losses.update(loss.data[0])
-            error_ratio.update(LogMetric.error_ratio(output.data.numpy(), target))
+            losses.update(criterion(output, target_var).data[0])
+            error_ratio.update(evaluation(output, target_var).data[0])
 
         # measure elapsed time
         batch_time.update(time.time() - end)
