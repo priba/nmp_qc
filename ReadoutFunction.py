@@ -72,11 +72,9 @@ class ReadoutFunction(nn.Module):
         aux = []
         for l in range(len(h)):
             for j in range(0,h[l].size()[0]):
-                #if 'aux' in locals():
                 aux.append(torch.squeeze(nn.Softmax()(torch.mv(torch.t(self.learn_args[l]), h[l][j]).view(1, self.args['out']))))
-                #else:
-                #    aux = torch.squeeze(nn.Softmax()(torch.mv(torch.t(self.learn_args[l]), h[l][j]).view(1, self.args['out'])))
-        aux = torch.sum(torch.stack(aux, 0), dim=0)
+
+        aux = torch.sum(torch.stack(aux, 0),0)
         return torch.squeeze(self.learn_modules[0](aux))
 
     def init_duvenaud(self, params):

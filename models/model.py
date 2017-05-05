@@ -44,18 +44,14 @@ class Nmp(nn.Module):
             h_t = []
             for v in range(0, len(g)):
                 neigh = g[v]
-                m_neigh = dtype()
+                m_neigh = []
                 for w in neigh:
                     if (v, w) in e:
                         e_vw = e[(v, w)]
                     else:
                         e_vw = e[(w, v)]
-                    m_v = self.m[t].forward(h[t][v], h[t][w], e_vw)
-                    if len(m_neigh):
-                        m_neigh += m_v
-                    else:
-                        m_neigh = m_v
-
+                    m_neigh.append(self.m[t].forward(h[t][v], h[t][w], e_vw))
+                m_neigh = torch.squeeze(torch.sum(torch.stack(m_neigh, 0),0))
                 # Duvenaud
                 opt = {'deg': len(neigh)}
                 h_t.append(self.u[t].forward(h[t][v], m_neigh, opt))
