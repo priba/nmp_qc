@@ -30,6 +30,7 @@ import numpy as np
 __author__ = "Pau Riba, Anjan Dutta"
 __email__ = "priba@cvc.uab.cat, adutta@cvc.uab.cat"
 
+torch.multiprocessing.set_sharing_strategy('file_system')
 
 # Parser check
 def restricted_float(x, inter):
@@ -84,11 +85,11 @@ def main():
 
     valid_ids = [files[i] for i in idx[0:10000]]
     test_ids = [files[i] for i in idx[10000:20000]]
-    train_ids = [files[i] for i in idx[20000:]]
-
-    data_train = datasets.Qm9(root, train_ids)
-    data_valid = datasets.Qm9(root, valid_ids)
-    data_test = datasets.Qm9(root, test_ids)
+    train_ids = [files[i] for i in idx[20000:]]    
+    
+    data_valid = datasets.Qm9(root, valid_ids, type_='Validation')
+    data_train = datasets.Qm9(root, train_ids, type_='Train')
+    data_test = datasets.Qm9(root, test_ids, type_='Test')
 
     # Define model and optimizer
     print('Define model')
@@ -99,7 +100,7 @@ def main():
     print('\tStatistics')
     stat_dict = datasets.utils.get_graph_stats(data_valid, ['degrees', 'target_mean', 'target_std'])
 
-    data_train.set_target_transform(lambda x: datasets.utils.normalize_data(x,stat_dict['target_mean'],
+    data_train.set_target_transform(lambda x: datasets.utils.normalize_data(x, stat_dict['target_mean'],
                                                                             stat_dict['target_std']))
     data_valid.set_target_transform(lambda x: datasets.utils.normalize_data(x, stat_dict['target_mean'],
                                                                             stat_dict['target_std']))
@@ -107,19 +108,19 @@ def main():
                                                                             stat_dict['target_std']))
 
     # Data Loader
-    train_loader = torch.utils.data.DataLoader(data_train,
+    train_loader = torch.utils.data.DataLoader(data_train, num_workers = 8,
                                                batch_size=20, shuffle=True, collate_fn=datasets.utils.collate_g)
-    valid_loader = torch.utils.data.DataLoader(data_valid,
+    valid_loader = torch.utils.data.DataLoader(data_valid, num_workers = 8, 
                                                batch_size=20, shuffle=True, collate_fn=datasets.utils.collate_g)
-    test_loader = torch.utils.data.DataLoader(data_test,
+    test_loader = torch.utils.data.DataLoader(data_test, num_workers = 8,
                                                batch_size=20, shuffle=True, collate_fn=datasets.utils.collate_g)
 
     print('\tCreate model')
     model = Nmp(stat_dict['degrees'], [len(list(h_t.values())[0]), len(list(e.values())[0])], [25, 30, 35], len(l))
 
     print('Check cuda')
-    if args.cuda:
-        model.cuda()
+#    if args.cuda:
+#        model.cuda()
 
     print('Optimizer')
     optimizer = optim.Adam(model.parameters(), lr=args.lr)

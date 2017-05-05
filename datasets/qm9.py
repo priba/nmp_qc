@@ -19,6 +19,8 @@ import time
 import os,sys
 
 import torch
+import pickle
+import h5py
 
 reader_folder = os.path.realpath( os.path.abspath('../GraphReader'))
 if reader_folder not in sys.path:
@@ -28,20 +30,34 @@ from GraphReader.graph_reader import xyz_graph_reader
 
 __author__ = "Pau Riba, Anjan Dutta"
 __email__ = "priba@cvc.uab.cat, adutta@cvc.uab.cat"
+        
+def _load_pickle_file(pickle_file):
+    f = h5py.File(pickle_file, "r")
+    data = []
+    for key in f.keys():
+        data.append(f[key])
+    return tuple(data)
 
 class Qm9(data.Dataset):
 
     # Constructor
-    def __init__(self, root_path, ids, vertex_transform=utils.qm9_nodes, edge_transform=utils.qm9_edges,
+    def __init__(self, root_path, ids, type_, vertex_transform=utils.qm9_nodes, edge_transform=utils.qm9_edges,
                  target_transform=None):
         self.root = root_path
         self.ids = ids
+        self.type_ = type_
         self.vertex_transform = vertex_transform
         self.edge_transform = edge_transform
         self.target_transform = target_transform
+        self.create_hdf5()
+#        self.create_pickle() # create pickle
 
     def __getitem__(self, index):
         g, target = xyz_graph_reader(os.path.join(self.root, self.ids[index]))
+#        For pickle
+#        with open(self.pickle_file, 'rb') as f:
+#            d = pickle.load(f)
+#        g, target = d[index]
         if self.vertex_transform is not None:
             h = self.vertex_transform(g)
         if self.edge_transform is not None:
@@ -55,6 +71,44 @@ class Qm9(data.Dataset):
 
     def set_target_transform(self, target_transform):
         self.target_transform = target_transform
+        
+    def create_pickle(self):
+        self.pickle_dir = os.path.abspath(os.path.join(self.root, os.pardir, 'pickles' ))
+        self.pickle_file = os.path.join(self.pickle_dir, self.type_ + '.pickle')
+        if os.path.exists(self.pickle_file):
+            print('Pickle already exists.')
+        else:    
+            if not os.path.isdir(self.pickle_dir):
+                os.makedirs(self.pickle_dir)            
+            d = []
+            for i, file in enumerate(self.ids):
+                print('Pickling {0} Set: {1}/{2}'.format(self.type_, i+1, len(self.ids)))
+                g, target = xyz_graph_reader(os.path.join(self.root, file))
+                d += [[g, target]]
+            with open(os.path.join(self.pickle_file), 'wb') as f:        
+                pickle.dump(d, f)
+                
+    def create_hdf5(self):
+        
+        self.hdf5_dir = os.path.abspath(os.path.join(self.root, os.pardir, 'hdf5s' ))
+        self.hdf5_file = os.path.join(self.hdf5_dir, self.type_ + '.hdf5')
+        if os.path.exists(self.hdf5_file):
+            print(self.hdf5_file +' already exists.')
+        else:    
+            if not os.path.isdir(self.hdf5_dir):
+                os.makedirs(self.hdf5_dir)               
+            
+            d = []
+            for i, file in enumerate(self.ids):
+                print('Zipping {0} Set: {1}/{2}'.format(self.type_, i+1, len(self.ids)))
+                g, target = xyz_graph_reader(os.path.join(self.root, file))
+                d += [[g.adjacency_list(), target]]
+                
+            f = h5py.File(self.hdf5_file, 'w')
+            dset = f.create_dataset('qm9_h5py', (len(d),2))
+            dset[...] = d
+            f.close()
+        
 
 if __name__ == '__main__':
 
