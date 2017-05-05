@@ -51,7 +51,7 @@ parser.add_argument('--no-cuda', action='store_true', default=False,
                     help='Enables CUDA training')
 parser.add_argument('--epochs', type=int, default=360, metavar='N',
                     help='Number of epochs to train (default: 360)')
-parser.add_argument('--lr', type=lambda x: restricted_float(x, [.01, 1]), default=1e-4, metavar='LR',
+parser.add_argument('--lr', type=lambda x: restricted_float(x, [1e-5, 5e-4]), default=1e-4, metavar='LR',
                     help='Initial learning rate [1e-5, 5e-4] (default: 1e-4)')
 parser.add_argument('--lr-decay', type=lambda x: restricted_float(x, [.01, 1]), default=0.6, metavar='LR-DECAY',
                     help='Learning rate decay factor [.01, 1] (default: 0.6)')
@@ -118,8 +118,8 @@ def main():
     model = Nmp(stat_dict['degrees'], [len(list(h_t.values())[0]), len(list(e.values())[0])], [25, 30, 35], len(l))
 
     print('Check cuda')
-    #if args.cuda:
-    #    model.cuda()
+    if args.cuda:
+        model.cuda()
 
     print('Optimizer')
     optimizer = optim.Adam(model.parameters(), lr=args.lr)
@@ -128,13 +128,13 @@ def main():
     print('Logger')
     logger = Logger(args.logPath)
 
-    lr_step = (args.lr-args.lr*args.lr_decay)/(args.epochs*0.9 - args.epochs*0.1)
+    lr_step = (args.lr-args.lr*args.lr_decay)/(args.epochs*args.schedule[1] - args.epochs*args.schedule[0])
 
     # Epoch for loop
     for epoch in range(0, args.epochs):
 
         if epoch > args.epochs*args.schedule[0] and epoch < args.epochs*args.schedule[1]:
-            args.lr += lr_step
+            args.lr -= lr_step
             for param_group in optimizer.param_groups:
                 param_group['lr'] = args.lr
 
@@ -172,8 +172,8 @@ def train(train_loader, model, criterion, optimizer, epoch, logger):
             train_loss += loss
             
             # Logs            
-            losses.update(loss.data[0])            
-            error_ratio.update(LogMetric.error_ratio(output.data.numpy(), target))            
+            losses.update(loss.data[0])
+            error_ratio.update(LogMetric.error_ratio(output.data.numpy(), target))           
 
         # compute gradient and do SGD step
         optimizer.zero_grad()
@@ -185,8 +185,9 @@ def train(train_loader, model, criterion, optimizer, epoch, logger):
         end = time.time()
 
         if i % args.log_interval == 0:
-            logger.log_value('loss', losses.avg).step()
-            logger.log_value('error_ratio', error_ratio.avg).step()
+            logger.log_value('train_batch_loss', losses.avg)
+            logger.log_value('train_batch_error_ratio', error_ratio.avg)
+            logger.log_value('train_batch_time', batch_time.avg).step()
             
             print('Epoch: [{0}][{1}/{2}]\t'
                   'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
@@ -195,6 +196,9 @@ def train(train_loader, model, criterion, optimizer, epoch, logger):
                   'Error Ratio {err.val:.4f} ({err.avg:.4f})'
                   .format(epoch, i, len(train_loader), batch_time=batch_time,
                           data_time=data_time, loss=losses, err=error_ratio))
+                          
+    logger.log_value('train_epoch_loss', losses.avg)
+    logger.log_value('train_epoch_error_ratio', error_ratio.avg)
 
 
 def validate(val_loader, model, criterion, logger):
@@ -228,8 +232,6 @@ def validate(val_loader, model, criterion, logger):
         end = time.time()
 
         if i % args.log_interval == 0:
-            logger.log_value('loss', losses.avg).step()
-            logger.log_value('error_ratio', error_ratio.avg).step()
             
             print('Test: [{0}/{1}]\t'
                   'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
@@ -240,6 +242,11 @@ def validate(val_loader, model, criterion, logger):
 
     print(' * Average Error Ratio {err.avg:.3f}'
           .format(err=error_ratio))
+          
+    logger.log_value('test_batch_loss', losses.avg)
+    logger.log_value('test_batch_error_ratio', error_ratio.avg)
+    logger.log_value('test_batch_time', batch_time.avg).step()
+          
     
 if __name__ == '__main__':
     main()
