@@ -44,10 +44,14 @@ class Qm9(data.Dataset):
         g, target = xyz_graph_reader(os.path.join(self.root, self.ids[index]))
         if self.vertex_transform is not None:
             h = self.vertex_transform(g)
+
         if self.edge_transform is not None:
             g, e = self.edge_transform(g)
+            g = g.adjacency_list()
+
         if self.target_transform is not None:
             target = self.target_transform(target)
+
         return (g, h, e), target
 
     def __len__(self):

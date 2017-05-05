@@ -21,9 +21,6 @@ import torch
 
 import torch.nn as nn
 
-#dtype = torch.cuda.FloatTensor
-dtype = torch.FloatTensor
-
 __author__ = "Pau Riba, Anjan Dutta"
 __email__ = "priba@cvc.uab.cat, adutta@cvc.uab.cat" 
 
@@ -80,7 +77,7 @@ class MessageFunction(nn.Module):
     
     # Duvenaud et al. (2015), Convolutional Networks for Learning Molecular Fingerprints
     def m_duvenaud(self, h_v, h_w, e_vw, args):
-        m = torch.cat([h_w, e_vw], 0).type(dtype)
+        m = torch.cat([h_w, e_vw], 0)
         return m
 
     def out_duvenaud(self, size_h, size_e, args):
@@ -164,7 +161,7 @@ if __name__ == '__main__':
     m_t = {}
     for v in g.nodes_iter():
         neigh = g.neighbors(v)
-        m_neigh = dtype()
+        m_neigh = type(h_t)
         for w in neigh:
             if (v,w) in e:
                 e_vw = e[(v, w)]

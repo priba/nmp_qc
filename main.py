@@ -62,9 +62,8 @@ parser.add_argument('--momentum', type=float, default=0.9, metavar='M',
 # i/o
 parser.add_argument('--log-interval', type=int, default=10, metavar='N',
                     help='How many batches to wait before logging training status')
-
-dtype = torch.FloatTensor
-
+# Accelerating
+parser.add_argument('--prefetch', type=int, default=2, help='Pre-fetching threads.')
 
 def main():
     global args
@@ -97,7 +96,16 @@ def main():
     g, h_t, e = g_tuple
 
     print('\tStatistics')
-    stat_dict = datasets.utils.get_graph_stats(data_valid, ['degrees', 'target_mean', 'target_std'])
+    #stat_dict = datasets.utils.get_graph_stats(data_valid, ['degrees', 'target_mean', 'target_std'])
+
+    stat_dict = {}
+    stat_dict['degrees'] = [1,2,3,4]
+    stat_dict['target_mean'] = np.array([    2.71802732e+00,   7.51685080e+01,  -2.40259300e-01,   1.09503300e-02,
+                                    2.51209430e-01,   1.18997445e+03,   1.48493130e-01,  -4.11609491e+02,
+                                    -4.11601022e+02,  -4.11600078e+02,  -4.11642909e+02,   3.15894998e+01])
+    stat_dict['target_std'] = np.array([    1.58422291e+00,   8.29443552e+00,   2.23854977e-02,   4.71030547e-02,
+                                   4.77156393e-02,   2.80754665e+02,   3.37238236e-02,   3.97717205e+01,
+                                   3.97715029e+01,   3.97715029e+01,   3.97722334e+01,   4.09458852e+00])
 
     data_train.set_target_transform(lambda x: datasets.utils.normalize_data(x,stat_dict['target_mean'],
                                                                             stat_dict['target_std']))
@@ -108,14 +116,20 @@ def main():
 
     # Data Loader
     train_loader = torch.utils.data.DataLoader(data_train,
-                                               batch_size=20, shuffle=True, collate_fn=datasets.utils.collate_g)
+                                               batch_size=20, shuffle=True, collate_fn=datasets.utils.collate_g,
+                                               num_workers=args.prefetch, pin_memory=True
+                                               )
     valid_loader = torch.utils.data.DataLoader(data_valid,
-                                               batch_size=20, shuffle=True, collate_fn=datasets.utils.collate_g)
+                                               batch_size=20, shuffle=False, collate_fn=datasets.utils.collate_g,
+                                               num_workers=args.prefetch, pin_memory=True
+                                               )
     test_loader = torch.utils.data.DataLoader(data_test,
-                                               batch_size=20, shuffle=True, collate_fn=datasets.utils.collate_g)
+                                              batch_size=20, shuffle=False, collate_fn=datasets.utils.collate_g,
+                                              num_workers=args.prefetch, pin_memory=True
+                                              )
 
     print('\tCreate model')
-    model = Nmp(stat_dict['degrees'], [len(list(h_t.values())[0]), len(list(e.values())[0])], [25, 30, 35], len(l))
+    model = Nmp(stat_dict['degrees'], [len(h_t[0]), len(list(e.values())[0])], [25, 30, 35], len(l))
 
     print('Check cuda')
     if args.cuda:
@@ -124,7 +138,8 @@ def main():
     print('Optimizer')
     optimizer = optim.Adam(model.parameters(), lr=args.lr)
     criterion = nn.MSELoss()
-    
+    evaluation = nn.L1Loss()
+
     print('Logger')
     logger = Logger(args.logPath)
 
@@ -139,13 +154,13 @@ def main():
                 param_group['lr'] = args.lr
 
         # train for one epoch
-        train(train_loader, model, criterion, optimizer, epoch, logger)
+        train(train_loader, model, criterion, optimizer, epoch, evaluation, logger)
 
         # evaluate on validation set
         validate(valid_loader, model, criterion, logger)
 
 
-def train(train_loader, model, criterion, optimizer, epoch, logger):
+def train(train_loader, model, criterion, optimizer, epoch, evaluation, logger):
     batch_time = AverageMeter()
     data_time = AverageMeter()
     losses = AverageMeter()
@@ -160,20 +175,25 @@ def train(train_loader, model, criterion, optimizer, epoch, logger):
         # measure data loading time
         data_time.update(time.time() - end)
 
-        train_loss = Variable(torch.zeros(1, 1))
+        train_loss = Variable(torch.zeros(1, 1)).cuda()
 
         # Iterate batch
         for (input_var, target) in batch:
-            target_var = torch.autograd.Variable(dtype(target))
+            # Prepare input
+            target_var = Variable(target.cuda())
 
-            # compute output
-            output = model(input_var)
+            g, h_in, e = input_var
+            h_in = Variable(h_in.cuda())
+            e = {k: Variable(v.cuda()) for k, v in e.items()}
+
+            # Compute output
+            output = model(g, h_in, e)
             loss = criterion(output, target_var)
             train_loss += loss
             
             # Logs            
             losses.update(loss.data[0])
-            error_ratio.update(LogMetric.error_ratio(output.data.numpy(), target))           
+            error_ratio.update(evaluation(output, target_var).data[0])
 
         # compute gradient and do SGD step
         optimizer.zero_grad()
@@ -216,7 +236,7 @@ def validate(val_loader, model, criterion, logger):
 
         # Iterate batch
         for (input_var, target) in batch:
-            target_var = torch.autograd.Variable(dtype(target))
+            target_var = torch.autograd.Variable(torch.from_numpy(target))
 
             # compute output
             output = model(input_var)

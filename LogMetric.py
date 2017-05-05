@@ -65,4 +65,3 @@ class Logger(object):
         elif os.path.isdir(path):
             import shutil
             shutil.rmtree(path)  # remove dir and all contains
-            
