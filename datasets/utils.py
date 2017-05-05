@@ -13,21 +13,17 @@ from __future__ import print_function
 import rdkit
 import torch
 from joblib import Parallel, delayed
-from multiprocessing import Pool
 import multiprocessing
-from torch.autograd import Variable
 
 import numpy as np
 
-#dtype = torch.cuda.FloatTensor
-dtype = torch.FloatTensor
 
 __author__ = "Pau Riba, Anjan Dutta"
 __email__ = "priba@cvc.uab.cat, adutta@cvc.uab.cat"
 
 
 def qm9_nodes(g, hydrogen=False):
-    h = {}
+    h = []
     for n, d in g.nodes_iter(data=True):
         h_t = []
         # Atom type (One-hot H, C, N, O F)
@@ -47,8 +43,8 @@ def qm9_nodes(g, hydrogen=False):
         # If number hydrogen is used as a
         if hydrogen:
             h_t.append(d['num_h'])
-        h[n] = Variable(dtype(h_t))
-    return h
+        h.append(h_t)
+    return torch.FloatTensor(h)
 
 
 def qm9_edges(g, e_representation='chem_graph'):
@@ -89,7 +85,7 @@ def qm9_edges(g, e_representation='chem_graph'):
             print('Incorrect Edge representation transform')
             quit()
         if e_t:
-            e[(n1, n2)] = Variable(dtype(e_t))
+            e[(n1, n2)] = torch.FloatTensor(e_t)
     for edg in remove_edges:
         g.remove_edge(*edg)
     return g, e
@@ -105,7 +101,7 @@ def get_values(obj, start, end, prop):
     for i in range(start, end):
         v = {}
         if 'degrees' in prop:
-            v['degrees'] = set(list(obj[i][0][0].degree().values()))
+            v['degrees'] = set(map(len, obj[i][0][0]))
         if 'target_mean' in prop or 'target_std' in prop:
             v['params'] = obj[i][1]
         vals.append(v)
@@ -134,4 +130,12 @@ def get_graph_stats(graph_obj_handle, prop='degrees'):
 
 
 def collate_g(batch):
+    for i in range(len(batch)):
+        input_var, target = batch[i]
+        target = torch.FloatTensor(target)
+    #     g, h_t, e = input_var
+    #
+    #     e = {k: v.type(type(h_t)) for k, v in e.items()}
+    #     input_var = (g, h_t, e)
+        batch[i] = (input_var, target)
     return batch

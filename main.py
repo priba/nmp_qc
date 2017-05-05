@@ -3,11 +3,9 @@
 
 """
     Trains a Neural Message Passing Model on various datasets. Methodologi defined in:
-
     Gilmer, J., Schoenholz S.S., Riley, P.F., Vinyals, O., Dahl, G.E. (2017)
     Neural Message Passing for Quantum Chemistry.
     arXiv preprint arXiv:1704.01212 [cs.LG]
-
 """
 
 # Own Modules

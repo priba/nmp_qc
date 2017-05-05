@@ -34,33 +34,27 @@ class Nmp(nn.Module):
                                  args={'layers': len(self.m) + 1, 'in': [in_n[0], out[0], out[1]], 'out': out[2],
                                        'target': l_target})
 
-    def forward(self, g_tuple):
-
-        g, h_in, e = g_tuple
+    def forward(self, g, h_in, e):
 
         h = []
         h.append(h_in)
 
         # Layer
         for t in range(0, len(self.m)):
-            h.append({})
-            for v in g.nodes_iter():
-                neigh = g.neighbors(v)
-                m_neigh = dtype()
+            h_t = []
+            for v in range(0, len(g)):
+                neigh = g[v]
+                m_neigh = []
                 for w in neigh:
                     if (v, w) in e:
                         e_vw = e[(v, w)]
                     else:
                         e_vw = e[(w, v)]
-                    m_v = self.m[t].forward(h[t][v], h[t][w], e_vw)
-                    if len(m_neigh):
-                        m_neigh += m_v
-                    else:
-                        m_neigh = m_v
-
+                    m_neigh.append(self.m[t].forward(h[t][v], h[t][w], e_vw))
+                m_neigh = torch.squeeze(torch.sum(torch.stack(m_neigh, 0),0))
                 # Duvenaud
                 opt = {'deg': len(neigh)}
-                h[t+1][v] = self.u[t].forward(h[t][v], m_neigh, opt)
-
+                h_t.append(self.u[t].forward(h[t][v], m_neigh, opt))
+            h.append(torch.stack(h_t, 0))
         # Readout
         return self.r.forward(h)

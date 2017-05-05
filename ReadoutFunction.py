@@ -68,13 +68,14 @@ class ReadoutFunction(nn.Module):
 
     # Duvenaud
     def r_duvenaud(self, h):
-        aux = torch.autograd.Variable(dtype(self.args['out']).zero_())
         # layers
+        aux = []
         for l in range(len(h)):
-            for j in h[l].keys():
-                aux += torch.squeeze(nn.Softmax()(torch.mv(torch.t(self.learn_args[l]), h[l][j]).view(1, len(aux))))
+            for j in range(0,h[l].size()[0]):
+                aux.append(torch.squeeze(nn.Softmax()(torch.mv(torch.t(self.learn_args[l]), h[l][j]).view(1, self.args['out']))))
 
-        return torch.squeeze(self.learn_modules[0](aux.view(1, len(aux))))
+        aux = torch.sum(torch.stack(aux, 0),0)
+        return torch.squeeze(self.learn_modules[0](aux))
 
     def init_duvenaud(self, params):
         learn_args = []
