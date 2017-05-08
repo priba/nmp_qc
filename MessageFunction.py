@@ -77,7 +77,7 @@ class MessageFunction(nn.Module):
     
     # Duvenaud et al. (2015), Convolutional Networks for Learning Molecular Fingerprints
     def m_duvenaud(self, h_v, h_w, e_vw, args):
-        m = torch.cat([h_w, e_vw], 0)
+        m = torch.cat([h_w, e_vw], 2)
         return m
 
     def out_duvenaud(self, size_h, size_e, args):

@@ -47,7 +47,6 @@ class Qm9(data.Dataset):
 
         if self.edge_transform is not None:
             g, e = self.edge_transform(g)
-            g = g.adjacency_list()
 
         if self.target_transform is not None:
             target = self.target_transform(target)

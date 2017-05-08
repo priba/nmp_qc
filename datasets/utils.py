@@ -14,6 +14,7 @@ import rdkit
 import torch
 from joblib import Parallel, delayed
 import multiprocessing
+import networkx as nx
 
 import numpy as np
 
@@ -44,7 +45,7 @@ def qm9_nodes(g, hydrogen=False):
         if hydrogen:
             h_t.append(d['num_h'])
         h.append(h_t)
-    return torch.FloatTensor(h)
+    return h
 
 
 def qm9_edges(g, e_representation='chem_graph'):
@@ -85,10 +86,10 @@ def qm9_edges(g, e_representation='chem_graph'):
             print('Incorrect Edge representation transform')
             quit()
         if e_t:
-            e[(n1, n2)] = torch.FloatTensor(e_t)
+            e[(n1, n2)] = e_t
     for edg in remove_edges:
         g.remove_edge(*edg)
-    return g, e
+    return nx.to_numpy_matrix(g), e
 
 
 def normalize_data(data, mean, std):
@@ -130,12 +131,38 @@ def get_graph_stats(graph_obj_handle, prop='degrees'):
 
 
 def collate_g(batch):
+
+    batch_sizes = np.max(np.array([[len(input_b[1]), len(input_b[1][0]), len(input_b[2]),
+                                len(list(input_b[2].values())[0])]  for (input_b, target_b) in batch]), axis=0)
+
+    g = np.zeros((len(batch), batch_sizes[0], batch_sizes[0]))
+    h = np.zeros((len(batch), batch_sizes[0], batch_sizes[1]))
+    e = np.zeros((len(batch), batch_sizes[0], batch_sizes[0], batch_sizes[3]))
+    target = np.zeros((len(batch), len(target_b)))
+
     for i in range(len(batch)):
-        input_var, target = batch[i]
-        target = torch.FloatTensor(target)
-    #     g, h_t, e = input_var
-    #
-    #     e = {k: v.type(type(h_t)) for k, v in e.items()}
-    #     input_var = (g, h_t, e)
-        batch[i] = (input_var, target)
-    return batch
+
+        num_nodes = len(batch[i][0][1])
+
+        # Adjacency list
+        g[i, 0:num_nodes, 0:num_nodes] = batch[i][0][0]
+
+        # Node features
+        h[i, 0:num_nodes, :] = batch[i][0][1]
+
+        # Edges
+        for edge in batch[i][0][2].keys():
+            e[i, edge[0], edge[1], :] = batch[i][0][2][edge]
+            e[i, edge[1], edge[0], :] = batch[i][0][2][edge]
+
+        # Target
+        target[i, :] = batch[i][1]
+
+    g = torch.FloatTensor(g)
+    h = torch.FloatTensor(h)
+    e = torch.FloatTensor(e)
+    target = torch.FloatTensor(target)
+
+    return g, h, e, target
+
+

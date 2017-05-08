@@ -71,11 +71,17 @@ class ReadoutFunction(nn.Module):
         # layers
         aux = []
         for l in range(len(h)):
-            for j in range(0,h[l].size()[0]):
-                aux.append(torch.squeeze(nn.Softmax()(torch.mv(torch.t(self.learn_args[l]), h[l][j]).view(1, self.args['out']))))
+            param_sz = self.learn_args[l].size()
+            parameter_mat = torch.t(self.learn_args[l])[None, ...].expand(h[l].size(0), param_sz[1],
+                                                                                      param_sz[0])
 
-        aux = torch.sum(torch.stack(aux, 0),0)
-        return torch.squeeze(self.learn_modules[0](aux))
+            aux = torch.transpose(torch.bmm(parameter_mat, torch.transpose(h[l],1,2)),1,2)
+
+            for j in range(0, aux.size(1)):
+                aux[:, j, :] = nn.Softmax()(aux[:, j, :].clone())
+
+        aux = torch.sum(aux, 1)
+        return self.learn_modules[0](torch.squeeze(aux))
 
     def init_duvenaud(self, params):
         learn_args = []

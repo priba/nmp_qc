@@ -170,37 +170,31 @@ def train(train_loader, model, criterion, optimizer, epoch, evaluation, logger):
     model.train()
 
     end = time.time()
-    for i, batch in enumerate(train_loader):
+    for i, (g, h, e, target) in enumerate(train_loader):
 
-        # measure data loading time
+        # Prepare input data
+        if args.cuda:
+            g, h, e, target = g.cuda(), h.cuda(), e.cuda(), target.cuda()
+        g, h, e, target = Variable(g), Variable(h), Variable(e), Variable(target)
+
+        # Measure data loading time
         data_time.update(time.time() - end)
 
-        train_loss = Variable(torch.zeros(1, 1)).cuda()
+        optimizer.zero_grad()
 
-        # Iterate batch
-        for (input_var, target) in batch:
-            # Prepare input
-            target_var = Variable(target.cuda())
+        # Compute output
+        output = model(g, h, e)
+        train_loss = criterion(output, target)
 
-            g, h_in, e = input_var
-            h_in = Variable(h_in.cuda())
-            e = {k: Variable(v.cuda()) for k, v in e.items()}
-
-            # Compute output
-            output = model(g, h_in, e)
-            loss = criterion(output, target_var)
-            train_loss += loss
-            
-            # Logs            
-            losses.update(loss.data[0])
-            error_ratio.update(evaluation(output, target_var).data[0])
+        # Logs
+        losses.update(train_loss.data[0], g.size(0))
+        error_ratio.update(evaluation(output, target).data[0], g.size(0))
 
         # compute gradient and do SGD step
-        optimizer.zero_grad()
         train_loss.backward()
         optimizer.step()
 
-        # measure elapsed time
+        # Measure elapsed time
         batch_time.update(time.time() - end)
         end = time.time()
 
@@ -230,24 +224,19 @@ def validate(val_loader, model, criterion, evaluation, logger):
     model.eval()
 
     end = time.time()
-    for i, batch in enumerate(val_loader):
+    for i, (g, h, e, target) in enumerate(val_loader):
 
-        # Iterate batch
-        for (input_var, target) in batch:
+        # Prepare input data
+        if args.cuda:
+            g, h, e, target = g.cuda(), h.cuda(), e.cuda(), target.cuda()
+        g, h, e, target = Variable(g), Variable(h), Variable(e), Variable(target)
 
-            # Prepare input
-            target_var = Variable(target.cuda())
+        # Compute output
+        output = model(g, h, e)
 
-            g, h_in, e = input_var
-            h_in = Variable(h_in.cuda())
-            e = {k: Variable(v.cuda()) for k, v in e.items()}
-
-            # Compute output
-            output = model(g, h_in, e)
-
-            # Logs
-            losses.update(criterion(output, target_var).data[0])
-            error_ratio.update(evaluation(output, target_var).data[0])
+        # Logs
+        losses.update(criterion(output, target).data[0], g.size(0))
+        error_ratio.update(evaluation(output, target).data[0], g.size(0))
 
         # measure elapsed time
         batch_time.update(time.time() - end)

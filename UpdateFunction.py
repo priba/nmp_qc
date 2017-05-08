@@ -63,16 +63,22 @@ class UpdateFunction(nn.Module):
     def get_definition(self):
         return self.u_definition
 
+    # Get the name of the used update function
+    def get_args(self):
+        return self.args
+
     ## Definition of various state of the art update functions
 
     # Duvenaud
     def u_duvenaud(self, h_v, m_v, opt):
 
-        # Find node degree
-        ind = [i for i in range(len(self.args['deg'])) if opt['deg']==self.args['deg'][i]][0]
+        param_sz = self.learn_args[0][opt['deg']].size()
+        parameter_mat = torch.t(self.learn_args[0][opt['deg']])[None, ...].expand(m_v.size(0), param_sz[1], param_sz[0])
 
-        aux = torch.mv(torch.t(self.learn_args[ind]), m_v)
-        return torch.nn.Sigmoid()(aux)
+        aux = torch.bmm(parameter_mat, torch.transpose(m_v, 1, 2))
+
+        return torch.transpose(torch.nn.Sigmoid()(aux), 1,2)
+
 
     def init_duvenaud(self, params):
         learn_args = []
@@ -80,9 +86,10 @@ class UpdateFunction(nn.Module):
         args = {}
 
         args['deg'] = params['deg']
+        args['out'] = params['out']
+
         # Define a parameter matrix H for each degree.
-        for d in range(len(params['deg'])):
-            learn_args.append(torch.nn.Parameter(torch.randn(params['in'], params['out'])))
+        learn_args.append(torch.nn.Parameter(torch.randn(len(params['deg']),params['in'], params['out'])))
 
         return nn.ParameterList(learn_args), nn.ModuleList(learn_modules), args
 

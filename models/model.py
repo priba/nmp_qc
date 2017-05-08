@@ -7,6 +7,9 @@ from ReadoutFunction import ReadoutFunction
 
 import torch
 import torch.nn as nn
+from torch.autograd import Variable
+
+import numpy as np
 
 __author__ = "Pau Riba, Anjan Dutta"
 __email__ = "priba@cvc.uab.cat, adutta@cvc.uab.cat"
@@ -41,20 +44,43 @@ class Nmp(nn.Module):
 
         # Layer
         for t in range(0, len(self.m)):
-            h_t = []
-            for v in range(0, len(g)):
-                neigh = g[v]
-                m_neigh = []
-                for w in neigh:
-                    if (v, w) in e:
-                        e_vw = e[(v, w)]
-                    else:
-                        e_vw = e[(w, v)]
-                    m_neigh.append(self.m[t].forward(h[t][v], h[t][w], e_vw))
-                m_neigh = torch.squeeze(torch.sum(torch.stack(m_neigh, 0),0))
+
+            u_args = self.u[t].get_args()
+
+            h_t = Variable(torch.Tensor(np.zeros((h_in.size(0), h_in.size(1), u_args['out']))).type(h[t].data.type()))
+
+            # Apply one layer pass (Message + Update)
+            for v in range(0, h_in.size(1)):
+
+                m = self.m[t].forward(h[t][:, v], h[t], e[:,v,:])
+
+                # Nodes without edge set message to 0
+                m = g[:, v, :, None].expand_as(m) * m
+
+                m = torch.sum(m, 1)
+
                 # Duvenaud
-                opt = {'deg': len(neigh)}
-                h_t.append(self.u[t].forward(h[t][v], m_neigh, opt))
-            h.append(torch.stack(h_t, 0))
+                deg = torch.sum(g[:, v, :].data, 1)
+
+                for i in range(len(u_args['deg'])):
+                    ind = deg == u_args['deg'][i]
+                    # ind = torch.squeeze(torch.nonzero(torch.squeeze(ind_binary)))
+                    ind = Variable(torch.squeeze(torch.nonzero(torch.squeeze(ind))))
+                    # ind = torch.squeeze(torch.nonzero(torch.squeeze(ind)))
+
+                    opt = {'deg': i}
+
+                    # Separate degrees
+                    # Update
+                    if len(ind) != 0:
+                        aux = self.u[t].forward(torch.index_select(h[t].clone(), 0, ind)[:, v, :], torch.index_select(m.clone(), 0, ind), opt)
+                        # aux = self.u[t].forward(h[t][:, v, :].clone(), m.clone(), opt)
+                        # aux = torch.mul(ind_binary[..., None].expand_as(aux).float(), aux.data)
+                        torch.index_select(h_t, 0, ind)[:, v, :] = torch.squeeze(aux)
+                        ind = ind.data.cpu().numpy()
+                        for j in range(len(ind)):
+                           h_t[ind[j], v, :] = aux[j, :]
+
+            h.append(h_t.clone())
         # Readout
         return self.r.forward(h)
