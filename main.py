@@ -60,7 +60,7 @@ parser.add_argument('--schedule', type=list, default=[0.1, 0.9], metavar='S',
 parser.add_argument('--momentum', type=float, default=0.9, metavar='M',
                     help='SGD momentum (default: 0.9)')
 # i/o
-parser.add_argument('--log-interval', type=int, default=10, metavar='N',
+parser.add_argument('--log-interval', type=int, default=100, metavar='N',
                     help='How many batches to wait before logging training status')
 # Accelerating
 parser.add_argument('--prefetch', type=int, default=2, help='Pre-fetching threads.')
@@ -116,15 +116,15 @@ def main():
 
     # Data Loader
     train_loader = torch.utils.data.DataLoader(data_train,
-                                               batch_size=20, shuffle=True, collate_fn=datasets.utils.collate_g,
+                                               batch_size=args.batch_size, shuffle=True, collate_fn=datasets.utils.collate_g,
                                                num_workers=args.prefetch, pin_memory=True
                                                )
     valid_loader = torch.utils.data.DataLoader(data_valid,
-                                               batch_size=20, shuffle=False, collate_fn=datasets.utils.collate_g,
+                                               batch_size=args.batch_size, shuffle=False, collate_fn=datasets.utils.collate_g,
                                                num_workers=args.prefetch, pin_memory=True
                                                )
     test_loader = torch.utils.data.DataLoader(data_test,
-                                              batch_size=20, shuffle=False, collate_fn=datasets.utils.collate_g,
+                                              batch_size=args.batch_size, shuffle=False, collate_fn=datasets.utils.collate_g,
                                               num_workers=args.prefetch, pin_memory=True
                                               )
 
@@ -133,6 +133,7 @@ def main():
 
     print('Check cuda')
     if args.cuda:
+        print('\tCuda available')
         model.cuda()
 
     print('Optimizer')
@@ -199,9 +200,9 @@ def train(train_loader, model, criterion, optimizer, epoch, evaluation, logger):
         end = time.time()
 
         if i % args.log_interval == 0:
-            logger.log_value('train_batch_loss', losses.avg)
-            logger.log_value('train_batch_error_ratio', error_ratio.avg)
-            logger.log_value('train_batch_time', batch_time.avg).step()
+#            logger.log_value('train_batch_loss', losses.avg)
+#            logger.log_value('train_batch_error_ratio', error_ratio.avg)
+#            logger.log_value('train_batch_time', batch_time.avg).step()
             
             print('Epoch: [{0}][{1}/{2}]\t'
                   'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
@@ -254,9 +255,9 @@ def validate(val_loader, model, criterion, evaluation, logger):
     print(' * Average Error Ratio {err.avg:.3f}'
           .format(err=error_ratio))
           
-    logger.log_value('test_batch_loss', losses.avg)
-    logger.log_value('test_batch_error_ratio', error_ratio.avg)
-    logger.log_value('test_batch_time', batch_time.avg).step()
+    logger.log_value('test_epoch_loss', losses.avg)
+    logger.log_value('test_epoch_error_ratio', error_ratio.avg)
+    logger.log_value('test_epoch_time', batch_time.avg).step()
           
     
 if __name__ == '__main__':
