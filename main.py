@@ -65,6 +65,7 @@ parser.add_argument('--log-interval', type=int, default=100, metavar='N',
 # Accelerating
 parser.add_argument('--prefetch', type=int, default=2, help='Pre-fetching threads.')
 
+
 def main():
     global args
     args = parser.parse_args()
