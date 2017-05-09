@@ -119,7 +119,7 @@ def gwhist_nodes(g):
         h_t += [float(x) for x in d['labels']]
         h.append(h_t)
         
-    return torch.FloatTensor(h)
+    return h
     
 
 def gwhist_edges(g):
@@ -127,9 +127,9 @@ def gwhist_edges(g):
     for n1, n2, d in g.edges_iter(data=True):
         e_t = []
         e_t += [10]
-        e[(n1,n2)] = torch.FloatTensor(e_t)
+        e[(n1,n2)] = e_t
         
-    return g, e
+    return nx.to_numpy_matrix(g), e
     
 
 def normalize_data(data, mean, std):
@@ -186,7 +186,7 @@ def collate_g(batch):
 
         num_nodes = len(batch[i][0][1])
 
-        # Adjacency list
+        # Adjacency matrix
         g[i, 0:num_nodes, 0:num_nodes] = batch[i][0][0]
 
         # Node features

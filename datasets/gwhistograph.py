@@ -46,8 +46,7 @@ class GWHISTOGRAPH(data.Dataset):
         e = []
         if self.edge_transform is not None:
             g, e = self.edge_transform(g)
-            g = g.adjacency_list()
-        
+
 #        if self.target_transform is None:
         target = self.target_transform(target)
 

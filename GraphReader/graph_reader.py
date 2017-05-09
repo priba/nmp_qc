@@ -288,13 +288,13 @@ def create_graph_gwhist(file):
     
     for edge in root_gxl.iter('edge'):
         s = edge.get('from')
-        s = int(s.split('_')[1]) + 1
+        s = int(s.split('_')[1])
         t = edge.get('to')
-        t = int(t.split('_')[1]) + 1
+        t = int(t.split('_')[1])
         g.add_edge(s,t)
         
-    for i in range(1, g.number_of_nodes()+1):
-        g.node[i]['labels'] = np.array(vl[i-1])
+    for i in range(g.number_of_nodes()):
+        g.node[i]['labels'] = np.array(vl[i])
         
     return g
 

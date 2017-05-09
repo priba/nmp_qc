@@ -140,7 +140,8 @@ def main():
     print('Optimizer')
     optimizer = optim.Adam(model.parameters(), lr=args.lr)
     criterion = nn.MSELoss()
-    evaluation = nn.L1Loss()
+    # evaluation = nn.L1Loss()
+    evaluation = lambda output, target: torch.mean(torch.abs(output - target) / torch.abs(target))
 
     print('Logger')
     logger = Logger(args.logPath)
@@ -201,7 +202,7 @@ def train(train_loader, model, criterion, optimizer, epoch, evaluation, logger):
         end = time.time()
 
         if i % args.log_interval == 0:
-            
+
             print('Epoch: [{0}][{1}/{2}]\t'
                   'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
                   'Data {data_time.val:.3f} ({data_time.avg:.3f})\t'
