@@ -101,12 +101,12 @@ def main():
 
     stat_dict = {}
     stat_dict['degrees'] = [1,2,3,4]
-    stat_dict['target_mean'] = np.array([    2.71802732e+00,   7.51685080e+01,  -2.40259300e-01,   1.09503300e-02,
-                                    2.51209430e-01,   1.18997445e+03,   1.48493130e-01,  -4.11609491e+02,
-                                    -4.11601022e+02,  -4.11600078e+02,  -4.11642909e+02,   3.15894998e+01])
-    stat_dict['target_std'] = np.array([    1.58422291e+00,   8.29443552e+00,   2.23854977e-02,   4.71030547e-02,
-                                   4.77156393e-02,   2.80754665e+02,   3.37238236e-02,   3.97717205e+01,
-                                   3.97715029e+01,   3.97715029e+01,   3.97722334e+01,   4.09458852e+00])
+    stat_dict['target_mean'] = np.array([2.71802732e+00,   7.51685080e+01,  -2.40259300e-01,   1.09503300e-02,
+                                         2.51209430e-01,   1.18997445e+03,   1.48493130e-01,  -4.11609491e+02,
+                                        -4.11601022e+02,  -4.11600078e+02,  -4.11642909e+02,   3.15894998e+01])
+    stat_dict['target_std'] = np.array([1.58422291e+00,   8.29443552e+00,   2.23854977e-02,   4.71030547e-02,
+                                        4.77156393e-02,   2.80754665e+02,   3.37238236e-02,   3.97717205e+01,
+                                        3.97715029e+01,   3.97715029e+01,   3.97722334e+01,   4.09458852e+00])
 
     data_train.set_target_transform(lambda x: datasets.utils.normalize_data(x,stat_dict['target_mean'],
                                                                             stat_dict['target_std']))
@@ -201,9 +201,6 @@ def train(train_loader, model, criterion, optimizer, epoch, evaluation, logger):
         end = time.time()
 
         if i % args.log_interval == 0:
-#            logger.log_value('train_batch_loss', losses.avg)
-#            logger.log_value('train_batch_error_ratio', error_ratio.avg)
-#            logger.log_value('train_batch_time', batch_time.avg).step()
             
             print('Epoch: [{0}][{1}/{2}]\t'
                   'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'

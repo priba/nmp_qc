@@ -22,17 +22,17 @@ __email__ = "priba@cvc.uab.cat, adutta@cvc.uab.cat"
 
 class GWHISTOGRAPH(data.Dataset):
     
-    def __init__(self, root_path, subset, ids, classes, vertex_transform=utils.gwhist_nodes, edge_transform=utils.gwhist_edges,
-                 target_transform=None):
+    def __init__(self, root_path, subset, ids, classes, max_class_num, vertex_transform=utils.gwhist_nodes, 
+                 edge_transform=utils.gwhist_edges):
         
         self.root = root_path
         self.subdir = 'Data/Word_Graphs/01_Skew'
         self.subset = subset
         self.classes = classes
         self.ids = ids
+        self.max_class_num = max_class_num
         self.vertex_transform = vertex_transform
         self.edge_transform = edge_transform
-        self.target_transform = target_transform
         
     def __getitem__(self, index):        
                 
@@ -47,14 +47,18 @@ class GWHISTOGRAPH(data.Dataset):
         if self.edge_transform is not None:
             g, e = self.edge_transform(g)
             g = g.adjacency_list()
-
-        if self.target_transform is not None:
-            target = self.target_transform(target)
+        
+#        if self.target_transform is None:
+        target = self.target_transform(target)
 
         return (g, h, e), target
         
     def __len__(self):
         return len(self.ids)
+        
+    def target_transform(self, target):
+        target_one_hot = [int(i==target-1) for i in range(self.max_class_num)]
+        return target_one_hot
     
 if __name__ == '__main__':
 

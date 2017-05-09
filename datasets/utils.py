@@ -166,6 +166,7 @@ def get_graph_stats(graph_obj_handle, prop='degrees'):
         stat_dict['target_mean'] = np.mean(param, axis=0)
     if 'target_std' in prop:
         stat_dict['target_std'] = np.std(param, axis=0)
+        
 
     return stat_dict
 
@@ -178,6 +179,7 @@ def collate_g(batch):
     g = np.zeros((len(batch), batch_sizes[0], batch_sizes[0]))
     h = np.zeros((len(batch), batch_sizes[0], batch_sizes[1]))
     e = np.zeros((len(batch), batch_sizes[0], batch_sizes[0], batch_sizes[3]))
+
     target = np.zeros((len(batch), len(batch[0][1])))
 
     for i in range(len(batch)):

@@ -86,14 +86,16 @@ def main():
     print('Prepare files')
     
     train_classes, train_ids = read_2cols_set_files(os.path.join(root,'Set/Train.txt'))
-    test_classes, test_ids = read_2cols_set_files(os.path.join(root,'Set/Test.txt'))
     valid_classes, valid_ids = read_2cols_set_files(os.path.join(root,'Set/Valid.txt'))
+    test_classes, test_ids = read_2cols_set_files(os.path.join(root,'Set/Test.txt'))    
     
     train_classes, valid_classes, test_classes = create_numeric_classes(train_classes, valid_classes, test_classes)
-
-    data_train = datasets.GWHISTOGRAPH(root, subset, train_ids, train_classes)
-    data_valid = datasets.GWHISTOGRAPH(root, subset, valid_ids, valid_classes)
-    data_test = datasets.GWHISTOGRAPH(root, subset, test_ids, test_classes)
+    
+    max_class_num = max(train_classes+valid_classes+test_classes)
+    
+    data_train = datasets.GWHISTOGRAPH(root, subset, train_ids, train_classes, max_class_num)
+    data_valid = datasets.GWHISTOGRAPH(root, subset, valid_ids, valid_classes, max_class_num)
+    data_test = datasets.GWHISTOGRAPH(root, subset, test_ids, test_classes, max_class_num)
     
     # Define model and optimizer
     print('Define model')
@@ -116,7 +118,7 @@ def main():
                                               num_workers=args.prefetch, pin_memory=True)
 
     print('\tCreate model')
-    model = Nmp(stat_dict['degrees'], [len(h_t[0]), len(list(e.values())[0])], [25, 30, 35], 1)
+    model = Nmp(stat_dict['degrees'], [len(h_t[0]), len(list(e.values())[0])], [25, 30, 35], len(l))
 
     print('Check cuda')
     if args.cuda:
@@ -157,44 +159,35 @@ def train(train_loader, model, criterion, optimizer, epoch, evaluation, logger):
     model.train()
 
     end = time.time()
-    for i, batch in enumerate(train_loader):
+    for i, (g, h, e, target) in enumerate(train_loader):
+        
+        # Prepare input data
+        if args.cuda:
+            g, h, e, target = g.cuda(), h.cuda(), e.cuda(), target.cuda()
+        g, h, e, target = Variable(g), Variable(h), Variable(e), Variable(target)
 
-        # measure data loading time
+        # Measure data loading time
         data_time.update(time.time() - end)
 
-        train_loss = Variable(torch.zeros(1, 1)).cuda()
+        optimizer.zero_grad()
 
-        # Iterate batch
-        for (input_var, target) in batch:
-            # Prepare input
-            target_var = Variable(target.cuda())
+        # Compute output
+        output = model(g, h, e)
+        train_loss = criterion(output, target)
 
-            g, h_in, e = input_var
-            h_in = Variable(h_in.cuda())
-            e = {k: Variable(v.cuda()) for k, v in e.items()}
-
-            # Compute output
-            output = model(g, h_in, e)
-            loss = criterion(output, target_var)
-            train_loss += loss
-            
-            # Logs            
-            losses.update(loss.data[0])
-            error_ratio.update(evaluation(output, target_var).data[0])
+        # Logs
+        losses.update(train_loss.data[0], g.size(0))
+        error_ratio.update(evaluation(output, target).data[0], g.size(0))
 
         # compute gradient and do SGD step
-        optimizer.zero_grad()
         train_loss.backward()
         optimizer.step()
 
-        # measure elapsed time
+        # Measure elapsed time
         batch_time.update(time.time() - end)
         end = time.time()
 
         if i % args.log_interval == 0:
-            logger.log_value('train_batch_loss', losses.avg)
-            logger.log_value('train_batch_error_ratio', error_ratio.avg)
-            logger.log_value('train_batch_time', batch_time.avg).step()
             
             print('Epoch: [{0}][{1}/{2}]\t'
                   'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
@@ -217,24 +210,19 @@ def validate(val_loader, model, criterion, evaluation, logger):
     model.eval()
 
     end = time.time()
-    for i, batch in enumerate(val_loader):
+    for i, (g, h, e, target) in enumerate(val_loader):
 
-        # Iterate batch
-        for (input_var, target) in batch:
+        # Prepare input data
+        if args.cuda:
+            g, h, e, target = g.cuda(), h.cuda(), e.cuda(), target.cuda()
+        g, h, e, target = Variable(g), Variable(h), Variable(e), Variable(target)
 
-            # Prepare input
-            target_var = Variable(target.cuda())
+        # Compute output
+        output = model(g, h, e)
 
-            g, h_in, e = input_var
-            h_in = Variable(h_in.cuda())
-            e = {k: Variable(v.cuda()) for k, v in e.items()}
-
-            # Compute output
-            output = model(g, h_in, e)
-
-            # Logs
-            losses.update(criterion(output, target_var).data[0])
-            error_ratio.update(evaluation(output, target_var).data[0])
+        # Logs
+        losses.update(criterion(output, target).data[0], g.size(0))
+        error_ratio.update(evaluation(output, target).data[0], g.size(0))
 
         # measure elapsed time
         batch_time.update(time.time() - end)
@@ -252,9 +240,9 @@ def validate(val_loader, model, criterion, evaluation, logger):
     print(' * Average Error Ratio {err.avg:.3f}'
           .format(err=error_ratio))
           
-    logger.log_value('test_batch_loss', losses.avg)
-    logger.log_value('test_batch_error_ratio', error_ratio.avg)
-    logger.log_value('test_batch_time', batch_time.avg).step()
+    logger.log_value('test_epoch_loss', losses.avg)
+    logger.log_value('test_epoch_error_ratio', error_ratio.avg)
+    logger.log_value('test_epoch_time', batch_time.avg).step()
           
     
 if __name__ == '__main__':
