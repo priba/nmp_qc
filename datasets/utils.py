@@ -90,7 +90,47 @@ def qm9_edges(g, e_representation='chem_graph'):
     for edg in remove_edges:
         g.remove_edge(*edg)
     return nx.to_numpy_matrix(g), e
+    
+    
+def mutag_nodes(g):
+    h = []
+    for n, d in g.nodes_iter(data=True):
+        h_t = []
+        h_t.append(d['label'])
+        h.append(h_t)
+        
+    return torch.FloatTensor(h)
+    
+    
+def mutag_edges(g):
+    e = {}
+    for n1, n2, d in g.edges_iter(data=True):
+        e_t = []
+        e_t.append(d['label'])
+        e[(n1,n2)] = torch.FloatTensor(e_t)
+        
+    return g, e
+    
+    
+def gwhist_nodes(g):
+    h = []
+    for n, d in g.nodes_iter(data=True):
+        h_t = []
+        h_t += [float(x) for x in d['labels']]
+        h.append(h_t)
+        
+    return torch.FloatTensor(h)
+    
 
+def gwhist_edges(g):
+    e = {}
+    for n1, n2, d in g.edges_iter(data=True):
+        e_t = []
+        e_t += [10]
+        e[(n1,n2)] = torch.FloatTensor(e_t)
+        
+    return g, e
+    
 
 def normalize_data(data, mean, std):
     data_norm = (data-mean)/std

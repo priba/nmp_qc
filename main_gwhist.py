@@ -2,12 +2,11 @@
 # -*- coding: utf-8 -*-
 
 """
-    Trains a Neural Message Passing Model on various datasets. Methodologi defined in:
+    Trains a Neural Message Passing Model on various datasets. Methodology defined in:
 
     Gilmer, J., Schoenholz S.S., Riley, P.F., Vinyals, O., Dahl, G.E. (2017)
     Neural Message Passing for Quantum Chemistry.
     arXiv preprint arXiv:1704.01212 [cs.LG]
-
 """
 
 # Own Modules
@@ -24,12 +23,19 @@ from torch.autograd import Variable
 
 import time
 import argparse
-import os
+import os, sys
 import numpy as np
+
+reader_folder = os.path.realpath( os.path.abspath('../GraphReader'))
+if reader_folder not in sys.path:
+    sys.path.insert(1, reader_folder)
+
+from GraphReader.graph_reader import read_2cols_set_files, create_numeric_classes
 
 __author__ = "Pau Riba, Anjan Dutta"
 __email__ = "priba@cvc.uab.cat, adutta@cvc.uab.cat"
 
+torch.multiprocessing.set_sharing_strategy('file_system')
 
 # Parser check
 def restricted_float(x, inter):
@@ -41,8 +47,9 @@ def restricted_float(x, inter):
 # Argument parser
 parser = argparse.ArgumentParser(description='Neural message passing')
 
-parser.add_argument('--dataset', default='qm9', help='QM9')
-parser.add_argument('--datasetPath', default='./data/qm9/dsgdb9nsd/', help='dataset path')
+parser.add_argument('--dataset', default='gwhistograph', help='GWHISTOGRAPH')
+parser.add_argument('--datasetPath', default='./data/GWHistoGraphs/', help='dataset path')
+parser.add_argument('--subSet', default='01_Keypoint', help='sub dataset')
 parser.add_argument('--logPath', default='./log/', help='log path')
 # Optimization Options
 parser.add_argument('--batch-size', type=int, default=20, metavar='N',
@@ -60,11 +67,10 @@ parser.add_argument('--schedule', type=list, default=[0.1, 0.9], metavar='S',
 parser.add_argument('--momentum', type=float, default=0.9, metavar='M',
                     help='SGD momentum (default: 0.9)')
 # i/o
-parser.add_argument('--log-interval', type=int, default=200, metavar='N',
+parser.add_argument('--log-interval', type=int, default=100, metavar='N',
                     help='How many batches to wait before logging training status')
 # Accelerating
 parser.add_argument('--prefetch', type=int, default=2, help='Pre-fetching threads.')
-
 
 def main():
     global args
@@ -75,66 +81,45 @@ def main():
 
     # Load data
     root = args.datasetPath
+    subset = args.subSet
 
     print('Prepare files')
-    files = [f for f in os.listdir(root) if os.path.isfile(os.path.join(root, f))]
+    
+    train_classes, train_ids = read_2cols_set_files(os.path.join(root,'Set/Train.txt'))
+    test_classes, test_ids = read_2cols_set_files(os.path.join(root,'Set/Test.txt'))
+    valid_classes, valid_ids = read_2cols_set_files(os.path.join(root,'Set/Valid.txt'))
+    
+    train_classes, valid_classes, test_classes = create_numeric_classes(train_classes, valid_classes, test_classes)
 
-    idx = np.random.permutation(len(files))
-    idx = idx.tolist()
-
-    valid_ids = [files[i] for i in idx[0:10000]]
-    test_ids = [files[i] for i in idx[10000:20000]]
-    train_ids = [files[i] for i in idx[20000:]]
-
-    data_train = datasets.Qm9(root, train_ids)
-    data_valid = datasets.Qm9(root, valid_ids)
-    data_test = datasets.Qm9(root, test_ids)
-
+    data_train = datasets.GWHISTOGRAPH(root, subset, train_ids, train_classes)
+    data_valid = datasets.GWHISTOGRAPH(root, subset, valid_ids, valid_classes)
+    data_test = datasets.GWHISTOGRAPH(root, subset, test_ids, test_classes)
+    
     # Define model and optimizer
     print('Define model')
     # Select one graph
     g_tuple, l = data_train[0]
     g, h_t, e = g_tuple
-
+    
     print('\tStatistics')
-    #stat_dict = datasets.utils.get_graph_stats(data_valid, ['degrees', 'target_mean', 'target_std'])
-
-    stat_dict = {}
-    stat_dict['degrees'] = [1,2,3,4]
-    stat_dict['target_mean'] = np.array([    2.71802732e+00,   7.51685080e+01,  -2.40259300e-01,   1.09503300e-02,
-                                    2.51209430e-01,   1.18997445e+03,   1.48493130e-01,  -4.11609491e+02,
-                                    -4.11601022e+02,  -4.11600078e+02,  -4.11642909e+02,   3.15894998e+01])
-    stat_dict['target_std'] = np.array([    1.58422291e+00,   8.29443552e+00,   2.23854977e-02,   4.71030547e-02,
-                                   4.77156393e-02,   2.80754665e+02,   3.37238236e-02,   3.97717205e+01,
-                                   3.97715029e+01,   3.97715029e+01,   3.97722334e+01,   4.09458852e+00])
-
-    data_train.set_target_transform(lambda x: datasets.utils.normalize_data(x,stat_dict['target_mean'],
-                                                                            stat_dict['target_std']))
-    data_valid.set_target_transform(lambda x: datasets.utils.normalize_data(x, stat_dict['target_mean'],
-                                                                            stat_dict['target_std']))
-    data_test.set_target_transform(lambda x: datasets.utils.normalize_data(x, stat_dict['target_mean'],
-                                                                            stat_dict['target_std']))
+    stat_dict = datasets.utils.get_graph_stats(data_valid, ['degrees'])
 
     # Data Loader
     train_loader = torch.utils.data.DataLoader(data_train,
-                                               batch_size=args.batch_size, shuffle=True, collate_fn=datasets.utils.collate_g,
-                                               num_workers=args.prefetch, pin_memory=True
-                                               )
+                                               batch_size=20, shuffle=True, collate_fn=datasets.utils.collate_g,
+                                               num_workers=args.prefetch, pin_memory=True)
     valid_loader = torch.utils.data.DataLoader(data_valid,
-                                               batch_size=args.batch_size, shuffle=False, collate_fn=datasets.utils.collate_g,
-                                               num_workers=args.prefetch, pin_memory=True
-                                               )
+                                               batch_size=20, shuffle=False, collate_fn=datasets.utils.collate_g,
+                                               num_workers=args.prefetch, pin_memory=True)
     test_loader = torch.utils.data.DataLoader(data_test,
-                                              batch_size=args.batch_size, shuffle=False, collate_fn=datasets.utils.collate_g,
-                                              num_workers=args.prefetch, pin_memory=True
-                                              )
+                                              batch_size=20, shuffle=False, collate_fn=datasets.utils.collate_g,
+                                              num_workers=args.prefetch, pin_memory=True)
 
     print('\tCreate model')
-    model = Nmp(stat_dict['degrees'], [len(h_t[0]), len(list(e.values())[0])], [25, 30, 35], len(l))
+    model = Nmp(stat_dict['degrees'], [len(h_t[0]), len(list(e.values())[0])], [25, 30, 35], 1)
 
     print('Check cuda')
     if args.cuda:
-        print('\tCuda available')
         model.cuda()
 
     print('Optimizer')
@@ -172,38 +157,44 @@ def train(train_loader, model, criterion, optimizer, epoch, evaluation, logger):
     model.train()
 
     end = time.time()
-    for i, (g, h, e, target) in enumerate(train_loader):
+    for i, batch in enumerate(train_loader):
 
-        # Prepare input data
-        if args.cuda:
-            g, h, e, target = g.cuda(), h.cuda(), e.cuda(), target.cuda()
-        g, h, e, target = Variable(g), Variable(h), Variable(e), Variable(target)
-
-        # Measure data loading time
+        # measure data loading time
         data_time.update(time.time() - end)
 
-        optimizer.zero_grad()
+        train_loss = Variable(torch.zeros(1, 1)).cuda()
 
-        # Compute output
-        output = model(g, h, e)
-        train_loss = criterion(output, target)
+        # Iterate batch
+        for (input_var, target) in batch:
+            # Prepare input
+            target_var = Variable(target.cuda())
 
-        # Logs
-        losses.update(train_loss.data[0], g.size(0))
-        error_ratio.update(evaluation(output, target).data[0], g.size(0))
+            g, h_in, e = input_var
+            h_in = Variable(h_in.cuda())
+            e = {k: Variable(v.cuda()) for k, v in e.items()}
+
+            # Compute output
+            output = model(g, h_in, e)
+            loss = criterion(output, target_var)
+            train_loss += loss
+            
+            # Logs            
+            losses.update(loss.data[0])
+            error_ratio.update(evaluation(output, target_var).data[0])
 
         # compute gradient and do SGD step
+        optimizer.zero_grad()
         train_loss.backward()
         optimizer.step()
 
-        # Measure elapsed time
+        # measure elapsed time
         batch_time.update(time.time() - end)
         end = time.time()
 
         if i % args.log_interval == 0:
-#            logger.log_value('train_batch_loss', losses.avg)
-#            logger.log_value('train_batch_error_ratio', error_ratio.avg)
-#            logger.log_value('train_batch_time', batch_time.avg).step()
+            logger.log_value('train_batch_loss', losses.avg)
+            logger.log_value('train_batch_error_ratio', error_ratio.avg)
+            logger.log_value('train_batch_time', batch_time.avg).step()
             
             print('Epoch: [{0}][{1}/{2}]\t'
                   'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
@@ -226,19 +217,24 @@ def validate(val_loader, model, criterion, evaluation, logger):
     model.eval()
 
     end = time.time()
-    for i, (g, h, e, target) in enumerate(val_loader):
+    for i, batch in enumerate(val_loader):
 
-        # Prepare input data
-        if args.cuda:
-            g, h, e, target = g.cuda(), h.cuda(), e.cuda(), target.cuda()
-        g, h, e, target = Variable(g), Variable(h), Variable(e), Variable(target)
+        # Iterate batch
+        for (input_var, target) in batch:
 
-        # Compute output
-        output = model(g, h, e)
+            # Prepare input
+            target_var = Variable(target.cuda())
 
-        # Logs
-        losses.update(criterion(output, target).data[0], g.size(0))
-        error_ratio.update(evaluation(output, target).data[0], g.size(0))
+            g, h_in, e = input_var
+            h_in = Variable(h_in.cuda())
+            e = {k: Variable(v.cuda()) for k, v in e.items()}
+
+            # Compute output
+            output = model(g, h_in, e)
+
+            # Logs
+            losses.update(criterion(output, target_var).data[0])
+            error_ratio.update(evaluation(output, target_var).data[0])
 
         # measure elapsed time
         batch_time.update(time.time() - end)
@@ -256,9 +252,9 @@ def validate(val_loader, model, criterion, evaluation, logger):
     print(' * Average Error Ratio {err.avg:.3f}'
           .format(err=error_ratio))
           
-    logger.log_value('test_epoch_loss', losses.avg)
-    logger.log_value('test_epoch_error_ratio', error_ratio.avg)
-    logger.log_value('test_epoch_time', batch_time.avg).step()
+    logger.log_value('test_batch_loss', losses.avg)
+    logger.log_value('test_batch_error_ratio', error_ratio.avg)
+    logger.log_value('test_batch_time', batch_time.avg).step()
           
     
 if __name__ == '__main__':

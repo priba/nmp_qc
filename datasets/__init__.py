@@ -1,6 +1,6 @@
-from .histograph import HISTOGRAPH
+from .gwhistograph import GWHISTOGRAPH
 from .qm9 import Qm9
 from .mutag import MUTAG
 
 
-__all__ = ('MUTAG', 'Qm9', 'HISTOGRAPH')
+__all__ = ('MUTAG', 'Qm9', 'GWHISTOGRAPH')
