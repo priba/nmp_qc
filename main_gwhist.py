@@ -58,7 +58,7 @@ parser.add_argument('--no-cuda', action='store_true', default=False,
                     help='Enables CUDA training')
 parser.add_argument('--epochs', type=int, default=360, metavar='N',
                     help='Number of epochs to train (default: 360)')
-parser.add_argument('--lr', type=lambda x: restricted_float(x, [1e-5, 5e-4]), default=1e-4, metavar='LR',
+parser.add_argument('--lr', type=lambda x: restricted_float(x, [1e-5, 0.5]), default=0.001, metavar='LR',
                     help='Initial learning rate [1e-5, 5e-4] (default: 1e-4)')
 parser.add_argument('--lr-decay', type=lambda x: restricted_float(x, [.01, 1]), default=0.6, metavar='LR-DECAY',
                     help='Learning rate decay factor [.01, 1] (default: 0.6)')
@@ -108,13 +108,13 @@ def main():
 
     # Data Loader
     train_loader = torch.utils.data.DataLoader(data_train,
-                                               batch_size=20, shuffle=True, collate_fn=datasets.utils.collate_g,
+                                               batch_size=args.batch_size, shuffle=True, collate_fn=datasets.utils.collate_g,
                                                num_workers=args.prefetch, pin_memory=True)
     valid_loader = torch.utils.data.DataLoader(data_valid,
-                                               batch_size=20, shuffle=False, collate_fn=datasets.utils.collate_g,
+                                               batch_size=args.batch_size, shuffle=False, collate_fn=datasets.utils.collate_g,
                                                num_workers=args.prefetch, pin_memory=True)
     test_loader = torch.utils.data.DataLoader(data_test,
-                                              batch_size=20, shuffle=False, collate_fn=datasets.utils.collate_g,
+                                              batch_size=args.batch_size, shuffle=False, collate_fn=datasets.utils.collate_g,
                                               num_workers=args.prefetch, pin_memory=True)
 
     print('\tCreate model')
