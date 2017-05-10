@@ -104,7 +104,7 @@ def main():
     g, h_t, e = g_tuple
     
     print('\tStatistics')
-    stat_dict = datasets.utils.get_graph_stats(data_valid, ['degrees'])
+    stat_dict = datasets.utils.get_graph_stats(data_train, ['degrees'])
 
     # Data Loader
     train_loader = torch.utils.data.DataLoader(data_train,

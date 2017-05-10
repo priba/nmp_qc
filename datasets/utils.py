@@ -122,7 +122,8 @@ def get_values(obj, start, end, prop):
     for i in range(start, end):
         v = {}
         if 'degrees' in prop:
-            v['degrees'] = set(map(len, obj[i][0][0]))
+            # v['degrees'] = set(map(len, obj[i][0][0]))
+            v['degrees'] = set(sum(obj[i][0][0].sum(axis=0, dtype='int').tolist(), []))
         if 'target_mean' in prop or 'target_std' in prop:
             v['params'] = obj[i][1]
         vals.append(v)
