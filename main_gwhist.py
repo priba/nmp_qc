@@ -11,8 +11,8 @@
 
 # Own Modules
 import datasets
-from models.model import Nmp
-import LogMetric
+from datasets import utils
+from models.model import Nmp1
 from LogMetric import AverageMeter, Logger
 
 # Torch
@@ -91,11 +91,11 @@ def main():
     
     train_classes, valid_classes, test_classes = create_numeric_classes(train_classes, valid_classes, test_classes)
     
-    max_class_num = max(train_classes+valid_classes+test_classes)
+    num_classes = max(train_classes+valid_classes+test_classes) + 1
     
-    data_train = datasets.GWHISTOGRAPH(root, subset, train_ids, train_classes, max_class_num)
-    data_valid = datasets.GWHISTOGRAPH(root, subset, valid_ids, valid_classes, max_class_num)
-    data_test = datasets.GWHISTOGRAPH(root, subset, test_ids, test_classes, max_class_num)
+    data_train = datasets.GWHISTOGRAPH(root, subset, train_ids, train_classes, num_classes)
+    data_valid = datasets.GWHISTOGRAPH(root, subset, valid_ids, valid_classes, num_classes)
+    data_test = datasets.GWHISTOGRAPH(root, subset, test_ids, test_classes, num_classes)
     
     # Define model and optimizer
     print('Define model')
@@ -118,7 +118,7 @@ def main():
                                               num_workers=args.prefetch, pin_memory=True)
 
     print('\tCreate model')
-    model = Nmp(stat_dict['degrees'], [len(h_t[0]), len(list(e.values())[0])], [25, 30, 35], len(l))
+    model = Nmp1(stat_dict['degrees'], [len(h_t[0]), len(list(e.values())[0])], [25, 30, 35], num_classes)
 
     print('Check cuda')
     if args.cuda:
@@ -126,8 +126,10 @@ def main():
 
     print('Optimizer')
     optimizer = optim.Adam(model.parameters(), lr=args.lr)
-    criterion = nn.MSELoss()
-    evaluation = nn.L1Loss()
+    criterion = nn.CrossEntropyLoss()
+    if args.cuda:
+        criterion = criterion.cuda()
+    evaluation = utils.accuracy
 
     print('Logger')
     logger = Logger(args.logPath)
@@ -153,7 +155,7 @@ def train(train_loader, model, criterion, optimizer, epoch, evaluation, logger):
     batch_time = AverageMeter()
     data_time = AverageMeter()
     losses = AverageMeter()
-    error_ratio = AverageMeter()
+    accuracies = AverageMeter()
 
     # switch to train mode
     model.train()
@@ -173,11 +175,12 @@ def train(train_loader, model, criterion, optimizer, epoch, evaluation, logger):
 
         # Compute output
         output = model(g, h, e)
-        train_loss = criterion(output, target)
+        train_loss = criterion(output, torch.squeeze(target.type(torch.cuda.LongTensor)))
+        acc = Variable(evaluation(output.data, target, topk=(1,))[0])
 
         # Logs
         losses.update(train_loss.data[0], g.size(0))
-        error_ratio.update(evaluation(output, target).data[0], g.size(0))
+        accuracies.update(acc.data[0], g.size(0))
 
         # compute gradient and do SGD step
         train_loss.backward()
@@ -193,18 +196,18 @@ def train(train_loader, model, criterion, optimizer, epoch, evaluation, logger):
                   'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
                   'Data {data_time.val:.3f} ({data_time.avg:.3f})\t'
                   'Loss {loss.val:.4f} ({loss.avg:.4f})\t'
-                  'Error Ratio {err.val:.4f} ({err.avg:.4f})'
+                  'Accuracy {acc.val:.4f} ({acc.avg:.4f})'
                   .format(epoch, i, len(train_loader), batch_time=batch_time,
-                          data_time=data_time, loss=losses, err=error_ratio))
+                          data_time=data_time, loss=losses, acc=accuracies))
                           
     logger.log_value('train_epoch_loss', losses.avg)
-    logger.log_value('train_epoch_error_ratio', error_ratio.avg)
+    logger.log_value('train_epoch_accuracy', accuracies.avg)
 
 
 def validate(val_loader, model, criterion, evaluation, logger):
     batch_time = AverageMeter()
     losses = AverageMeter()
-    error_ratio = AverageMeter()
+    accuracies = AverageMeter()
 
     # switch to evaluate mode
     model.eval()
@@ -221,8 +224,9 @@ def validate(val_loader, model, criterion, evaluation, logger):
         output = model(g, h, e)
 
         # Logs
-        losses.update(criterion(output, target).data[0], g.size(0))
-        error_ratio.update(evaluation(output, target).data[0], g.size(0))
+        losses.update(criterion(output, torch.squeeze(target.type(torch.cuda.LongTensor))).data[0])
+        acc = Variable(evaluation(output.data, target, topk=(1,))[0])
+        accuracies.update(acc.data[0])
 
         # measure elapsed time
         batch_time.update(time.time() - end)
@@ -233,15 +237,15 @@ def validate(val_loader, model, criterion, evaluation, logger):
             print('Test: [{0}/{1}]\t'
                   'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
                   'Loss {loss.val:.4f} ({loss.avg:.4f})\t'
-                  'Error Ratio {err.val:.4f} ({err.avg:.4f})'
+                  'Accuracy {acc.val:.4f} ({acc.avg:.4f})'
                   .format(i, len(val_loader), batch_time=batch_time,
-                          loss=losses, err=error_ratio))
+                          loss=losses, acc=accuracies))
 
-    print(' * Average Error Ratio {err.avg:.3f}'
-          .format(err=error_ratio))
+    print(' * Average Accuracy {acc.avg:.3f}'
+          .format(acc=accuracies))
           
     logger.log_value('test_epoch_loss', losses.avg)
-    logger.log_value('test_epoch_error_ratio', error_ratio.avg)
+    logger.log_value('test_epoch_accuracy', accuracies.avg)
     logger.log_value('test_epoch_time', batch_time.avg).step()
           
     

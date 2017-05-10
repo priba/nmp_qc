@@ -111,26 +111,6 @@ def mutag_edges(g):
         
     return g, e
     
-    
-def gwhist_nodes(g):
-    h = []
-    for n, d in g.nodes_iter(data=True):
-        h_t = []
-        h_t += [float(x) for x in d['labels']]
-        h.append(h_t)
-        
-    return h
-    
-
-def gwhist_edges(g):
-    e = {}
-    for n1, n2, d in g.edges_iter(data=True):
-        e_t = []
-        e_t += [10]
-        e[(n1,n2)] = e_t
-        
-    return nx.to_numpy_matrix(g), e
-    
 
 def normalize_data(data, mean, std):
     data_norm = (data-mean)/std
@@ -166,9 +146,23 @@ def get_graph_stats(graph_obj_handle, prop='degrees'):
         stat_dict['target_mean'] = np.mean(param, axis=0)
     if 'target_std' in prop:
         stat_dict['target_std'] = np.std(param, axis=0)
-        
 
     return stat_dict
+
+
+def accuracy(output, target, topk=(1,)):
+    """Computes the precision@k for the specified values of k"""
+    maxk = max(topk)
+    batch_size = target.size(0)
+    _, pred = output.topk(maxk, 1, True, True)
+    pred = pred.t()
+    pred = pred.type(torch.cuda.FloatTensor)
+    correct = pred.eq(target.view(1, -1).expand_as(pred).data)
+    res = []
+    for k in topk:
+        correct_k = correct[:k].view(-1).float().sum(0)
+        res.append(correct_k.mul_(100.0 / batch_size))
+    return res
 
 
 def collate_g(batch):

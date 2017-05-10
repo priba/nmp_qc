@@ -128,13 +128,13 @@ def create_numeric_classes(train_classes, valid_classes, test_classes):
     for ix in range(len(uniq_classes)):
         idx = [i for i, c in enumerate(train_classes) if c == uniq_classes[ix]]
         for i in idx:
-            train_classes_[i] = ix + 1
+            train_classes_[i] = ix
         idx = [i for i, c in enumerate(valid_classes) if c == uniq_classes[ix]]
         for i in idx:
-            valid_classes_[i] = ix + 1
+            valid_classes_[i] = ix
         idx = [i for i, c in enumerate(test_classes) if c == uniq_classes[ix]]
         for i in idx:
-            test_classes_[i] = ix + 1
+            test_classes_[i] = ix
 
     return train_classes_, valid_classes_, test_classes_        
 

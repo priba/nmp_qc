@@ -8,8 +8,7 @@ Usage:
 import torch.utils.data as data
 import os, sys
 import argparse
-
-import datasets.utils as utils
+import networkx as nx
 
 reader_folder = os.path.realpath( os.path.abspath('../GraphReader'))
 if reader_folder not in sys.path:
@@ -20,10 +19,10 @@ from GraphReader.graph_reader import read_2cols_set_files, create_numeric_classe
 __author__ = "Pau Riba, Anjan Dutta"
 __email__ = "priba@cvc.uab.cat, adutta@cvc.uab.cat"
 
+
 class GWHISTOGRAPH(data.Dataset):
     
-    def __init__(self, root_path, subset, ids, classes, max_class_num, vertex_transform=utils.gwhist_nodes, 
-                 edge_transform=utils.gwhist_edges):
+    def __init__(self, root_path, subset, ids, classes, max_class_num):
         
         self.root = root_path
         self.subdir = 'Data/Word_Graphs/01_Skew'
@@ -31,23 +30,17 @@ class GWHISTOGRAPH(data.Dataset):
         self.classes = classes
         self.ids = ids
         self.max_class_num = max_class_num
-        self.vertex_transform = vertex_transform
-        self.edge_transform = edge_transform
         
     def __getitem__(self, index):        
                 
         g = create_graph_gwhist(os.path.join(self.root, self.subdir, self.subset, self.ids[index]))
+
         target = self.classes[index]
-        
-        h = []
-        if self.vertex_transform is not None:
-            h = self.vertex_transform(g)
 
-        e = []
-        if self.edge_transform is not None:
-            g, e = self.edge_transform(g)
+        h = self.vertex_transform(g)
 
-#        if self.target_transform is None:
+        g, e = self.edge_transform(g)
+
         target = self.target_transform(target)
 
         return (g, h, e), target
@@ -56,8 +49,25 @@ class GWHISTOGRAPH(data.Dataset):
         return len(self.ids)
         
     def target_transform(self, target):
-        target_one_hot = [int(i==target-1) for i in range(self.max_class_num)]
-        return target_one_hot
+        # [int(i == target-1) for i in range(self.max_class_num)]
+        # return target_one_hot
+        return [target]
+
+    def vertex_transform(self, g):
+        h = []
+        for n, d in g.nodes_iter(data=True):
+            h_t = []
+            h_t += [float(x) for x in d['labels']]
+            h.append(h_t)
+        return h
+
+    def edge_transform(self, g):
+        e = {}
+        for n1, n2, d in g.edges_iter(data=True):
+            e_t = []
+            e_t += [10]
+            e[(n1, n2)] = e_t
+        return nx.to_numpy_matrix(g), e
     
 if __name__ == '__main__':
 
@@ -76,10 +86,12 @@ if __name__ == '__main__':
     valid_classes, valid_ids = read_2cols_set_files(os.path.join(root,'Set/Valid.txt'))
     
     train_classes, valid_classes, test_classes = create_numeric_classes(train_classes, valid_classes, test_classes)
+
+    num_classes = max(train_classes + valid_classes + test_classes)
     
-    data_train = GWHISTOGRAPH(root, subset, train_ids, train_classes)
-    data_valid = GWHISTOGRAPH(root, subset, valid_ids, valid_classes)
-    data_test = GWHISTOGRAPH(root, subset, test_ids, test_classes)
+    data_train = GWHISTOGRAPH(root, subset, train_ids, train_classes, num_classes)
+    data_valid = GWHISTOGRAPH(root, subset, valid_ids, valid_classes, num_classes)
+    data_test = GWHISTOGRAPH(root, subset, test_ids, test_classes, num_classes)
     
     print(len(data_train))
     print(len(data_valid))
