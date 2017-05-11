@@ -22,7 +22,7 @@ class NMP_Duvenaud(nn.Module):
     in_n (size_v, size_e)
     """
     def __init__(self, d, in_n, out, l_target, type='regression'):
-        super(Nmp, self).__init__()
+        super(NMP_Duvenaud, self).__init__()
 
         n_layers = len(out)
 
@@ -57,7 +57,7 @@ class NMP_Duvenaud(nn.Module):
             # Apply one layer pass (Message + Update)
             for v in range(0, h_in.size(1)):
 
-                m = self.m[t].forward(h[t][:, v], h[t], e[:,v,:])
+                m = self.m[t].forward(h[t][:, v], h[t], e[:, v, :])
 
                 # Nodes without edge set message to 0
                 m = g[:, v, :, None].expand_as(m) * m
@@ -97,7 +97,7 @@ class NMP_GGNN(nn.Module):
     """
 
     def __init__(self, d, in_n, out, l_target, type='regression'):
-        super(Nmp, self).__init__()
+        super(NMP_GGNN, self).__init__()
 
         n_layers = len(out)
 
