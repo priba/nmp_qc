@@ -102,8 +102,9 @@ def get_values(obj, start, end, prop):
     for i in range(start, end):
         v = {}
         if 'degrees' in prop:
-            # v['degrees'] = set(map(len, obj[i][0][0]))
             v['degrees'] = set(sum(obj[i][0][0].sum(axis=0, dtype='int').tolist(), []))
+        if 'edge_labels' in prop:
+            v['edge_labels'] = set(sum(list(obj[i][0][2].values()), []))
         if 'target_mean' in prop or 'target_std' in prop:
             v['params'] = obj[i][1]
         vals.append(v)
@@ -120,7 +121,8 @@ def get_graph_stats(graph_obj_handle, prop='degrees'):
 
     if 'degrees' in prop:
         stat_dict['degrees'] = list(set([d for core_res in res for file_res in core_res for d in file_res['degrees']]))
-
+    if 'edge_labels' in prop:
+        stat_dict['edge_labels'] = list(set([d for core_res in res for file_res in core_res for d in file_res['edge_labels']]))
     if 'target_mean' in prop or 'target_std' in prop:
         param = np.array([file_res['params'] for core_res in res for file_res in core_res])
     if 'target_mean' in prop:

@@ -12,8 +12,7 @@
 
 # Own Modules
 import datasets
-from models.model import Nmp
-import LogMetric
+from models.model import NMP_GGNN
 from LogMetric import AverageMeter, Logger
 
 # Torch
@@ -97,16 +96,18 @@ def main():
     g, h_t, e = g_tuple
 
     print('\tStatistics')
-    #stat_dict = datasets.utils.get_graph_stats(data_valid, ['degrees', 'target_mean', 'target_std'])
+    # stat_dict = datasets.utils.get_graph_stats(data_valid, ['degrees', 'target_mean', 'target_std', 'edge_labels'])
 
     stat_dict = {}
-    stat_dict['degrees'] = [1,2,3,4]
+
+    stat_dict['degrees'] = [1, 2, 3, 4]
     stat_dict['target_mean'] = np.array([2.71802732e+00,   7.51685080e+01,  -2.40259300e-01,   1.09503300e-02,
                                          2.51209430e-01,   1.18997445e+03,   1.48493130e-01,  -4.11609491e+02,
                                         -4.11601022e+02,  -4.11600078e+02,  -4.11642909e+02,   3.15894998e+01])
     stat_dict['target_std'] = np.array([1.58422291e+00,   8.29443552e+00,   2.23854977e-02,   4.71030547e-02,
                                         4.77156393e-02,   2.80754665e+02,   3.37238236e-02,   3.97717205e+01,
                                         3.97715029e+01,   3.97715029e+01,   3.97722334e+01,   4.09458852e+00])
+    stat_dict['edge_labels'] = [1, 2, 3, 4]
 
     data_train.set_target_transform(lambda x: datasets.utils.normalize_data(x,stat_dict['target_mean'],
                                                                             stat_dict['target_std']))
@@ -130,7 +131,7 @@ def main():
                                               )
 
     print('\tCreate model')
-    model = Nmp(stat_dict['degrees'], [len(h_t[0]), len(list(e.values())[0])], [25, 30, 35], len(l))
+    model = NMP_GGNN(stat_dict['edge_labels'], [len(h_t[0]), len(list(e.values())[0])], [25, 30, 35], len(l))
 
     print('Check cuda')
     if args.cuda:

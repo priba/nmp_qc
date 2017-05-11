@@ -102,14 +102,15 @@ class NMP_GGNN(nn.Module):
         n_layers = len(out)
 
         # Define message 1 & 2
-        self.m = nn.ModuleList([MessageFunction('ggnn') for _ in range(n_layers)])
+        self.m = nn.ModuleList([MessageFunction('ggnn',
+                                                args={'e_labels': d, 'in': self.m[i]}) for _ in range(n_layers)])
 
         # Define Update 1 & 2
         self.u = nn.ModuleList([UpdateFunction('ggnn',
-                                               args={'deg': d, 'in': self.m[i].get_out_size(in_n[0], in_n[1]),
+                                               args={'e_labels': d, 'in': self.m[i].get_out_size(in_n[0], in_n[1]),
                                                      'out': out[0]}) if i == 0 else
                                 UpdateFunction('ggnn',
-                                               args={'deg': d, 'in': self.m[i].get_out_size(out[i - 1], in_n[1]),
+                                               args={'e_labels': d, 'in': self.m[i].get_out_size(out[i - 1], in_n[1]),
                                                      'out': out[i]}) for i in range(n_layers)])
 
         # Define Readout

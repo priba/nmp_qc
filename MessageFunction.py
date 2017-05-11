@@ -58,11 +58,13 @@ class MessageFunction(nn.Module):
             quit()
 
         self.learn_args, self.learn_modules, self.args = {
-                'duvenaud': self.init_duvenaud(args)
-            }.get(self.m_definition, (nn.ParameterList([]),nn.ModuleList([]),{}))
+                'duvenaud':     self.init_duvenaud(args),
+                'ggnn':         self.init_ggnn(args)
+            }.get(self.m_definition, (nn.ParameterList([]), nn.ModuleList([]), {}))
 
         self.m_size = {
-                'duvenaud': self.out_duvenaud
+                'duvenaud':     self.out_duvenaud,
+                'ggnn':         self.out_ggnn
             }.get(self.m_definition, None)
 
     # Get the name of the used message function
@@ -93,6 +95,18 @@ class MessageFunction(nn.Module):
     def m_ggnn(self, h_v, h_w, e_vw, args):
         m = torch.mm(args.edge_mat(e_vw), torch.t(h_w))
         return m
+
+    def out_ggnn(self, size_h, size_e, args):
+        pass
+
+
+    def init_ggnn(self, params):
+        pass
+        # Define a parameter matrix A for each degree.
+        # learn_args.append(torch.nn.Parameter(torch.randn(len(params['e_labels']), params['in'], params['out'])))
+        #
+        # return nn.ParameterList(learn_args), nn.ModuleList(learn_modules), args
+
 
     # Battaglia et al. (2016), Interaction Networks
     def m_intnet(self, h_v, h_w, e_vw, args):

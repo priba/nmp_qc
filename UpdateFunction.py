@@ -49,15 +49,17 @@ class UpdateFunction(nn.Module):
         self.u_definition = update_def.lower()
 
         self.u_function = {
-                    'duvenaud':   self.u_duvenaud
+                    'duvenaud':   self.u_duvenaud,
+                    'ggnn':       self.u_ggnn
                 }.get(self.u_definition, None)
 
         if self.u_function is None:
             print('WARNING!: Update Function has not been set correctly\n\tIncorrect definition ' + update_def)
 
         self.learn_args, self.learn_modules, self.args = {
-            'duvenaud': self.init_duvenaud(args)
-        }.get(self.u_definition, (nn.ParameterList([]),nn.ModuleList([]),{}))
+            'duvenaud':     self.init_duvenaud(args),
+            'ggnn':         self.init_ggnn(args)
+        }.get(self.u_definition, (nn.ParameterList([]), nn.ModuleList([]), {}))
 
     # Get the name of the used update function
     def get_definition(self):
@@ -77,8 +79,7 @@ class UpdateFunction(nn.Module):
 
         aux = torch.bmm(parameter_mat, torch.transpose(m_v, 1, 2))
 
-        return torch.transpose(torch.nn.Sigmoid()(aux), 1,2)
-
+        return torch.transpose(torch.nn.Sigmoid()(aux), 1, 2)
 
     def init_duvenaud(self, params):
         learn_args = []
@@ -89,7 +90,7 @@ class UpdateFunction(nn.Module):
         args['out'] = params['out']
 
         # Define a parameter matrix H for each degree.
-        learn_args.append(torch.nn.Parameter(torch.randn(len(params['deg']),params['in'], params['out'])))
+        learn_args.append(torch.nn.Parameter(torch.randn(len(params['deg']), params['in'], params['out'])))
 
         return nn.ParameterList(learn_args), nn.ModuleList(learn_modules), args
 
