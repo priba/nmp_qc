@@ -12,7 +12,7 @@
 # Own Modules
 import datasets
 from datasets import utils
-from models.model import Nmp1
+from models.model import NMP_Duvenaud
 from LogMetric import AverageMeter, Logger
 
 # Torch
@@ -72,6 +72,7 @@ parser.add_argument('--log-interval', type=int, default=100, metavar='N',
 # Accelerating
 parser.add_argument('--prefetch', type=int, default=2, help='Pre-fetching threads.')
 
+
 def main():
     global args
     args = parser.parse_args()
@@ -115,14 +116,15 @@ def main():
                                               num_workers=args.prefetch, pin_memory=True)
 
     print('\tCreate model')
-    model = Nmp1(stat_dict['degrees'], [len(h_t[0]), len(list(e.values())[0])], [25, 30, 35, 40], num_classes)
+    model = NMP_Duvenaud(stat_dict['degrees'], [len(h_t[0]), len(list(e.values())[0])], [25, 30, 35, 40], num_classes, type='classification')
 
     print('Check cuda')
     if args.cuda:
         model.cuda()
 
     print('Optimizer')
-    optimizer = optim.Adam(model.parameters(), lr=args.lr)
+    optimizer = optim.LBFGS(model.parameters())
+    # optimizer = optim.Adam(model.parameters(), lr=args.lr)
     criterion = nn.CrossEntropyLoss()
     if args.cuda:
         criterion = criterion.cuda()
@@ -146,7 +148,7 @@ def main():
 
         # evaluate on test set
         validate(test_loader, model, criterion, evaluation, logger)
-
+        logger.step()
 
 def train(train_loader, model, criterion, optimizer, epoch, evaluation, logger):
     batch_time = AverageMeter()
@@ -168,9 +170,19 @@ def train(train_loader, model, criterion, optimizer, epoch, evaluation, logger):
         # Measure data loading time
         data_time.update(time.time() - end)
 
-        optimizer.zero_grad()
+        def closure():
+            optimizer.zero_grad()
 
-        # Compute output
+            # Compute output
+            output = model(g, h, e)
+            train_loss = criterion(output, torch.squeeze(target.type(torch.cuda.LongTensor)))
+            # compute gradient and do SGD step
+            train_loss.backward()
+            return train_loss
+
+        optimizer.step(closure)
+
+
         output = model(g, h, e)
         train_loss = criterion(output, torch.squeeze(target.type(torch.cuda.LongTensor)))
         acc = Variable(evaluation(output.data, target, topk=(1,))[0])
@@ -178,10 +190,6 @@ def train(train_loader, model, criterion, optimizer, epoch, evaluation, logger):
         # Logs
         losses.update(train_loss.data[0], g.size(0))
         accuracies.update(acc.data[0], g.size(0))
-
-        # compute gradient and do SGD step
-        train_loss.backward()
-        optimizer.step()
 
         # Measure elapsed time
         batch_time.update(time.time() - end)
@@ -243,7 +251,7 @@ def validate(val_loader, model, criterion, evaluation, logger):
           
     logger.log_value('test_epoch_loss', losses.avg)
     logger.log_value('test_epoch_accuracy', accuracies.avg)
-    logger.log_value('test_epoch_time', batch_time.avg).step()
+    logger.log_value('test_epoch_time', batch_time.avg)
           
     
 if __name__ == '__main__':

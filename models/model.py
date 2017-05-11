@@ -36,7 +36,7 @@ class NMP_Duvenaud(nn.Module):
         # Define Readout
         self.r = ReadoutFunction('duvenaud',
                                  args={'layers': len(self.m) + 1,
-                                       'in': [in_n[0] if i == 0 else out[i-1] for i in range(n_layers)],
+                                       'in': [in_n[0] if i == 0 else out[i-1] for i in range(n_layers+1)],
                                        'out': out[n_layers-1],
                                        'target': l_target})
 
