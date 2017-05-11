@@ -12,8 +12,8 @@
 
 # Own Modules
 import datasets
-from models.model import Nmp
-import LogMetric
+from datasets import utils
+from models.model import Nmp1
 from LogMetric import AverageMeter, Logger
 
 # Torch
@@ -58,7 +58,7 @@ parser.add_argument('--no-cuda', action='store_true', default=False,
                     help='Enables CUDA training')
 parser.add_argument('--epochs', type=int, default=360, metavar='N',
                     help='Number of epochs to train (default: 360)')
-parser.add_argument('--lr', type=lambda x: restricted_float(x, [1e-5, 5e-4]), default=1e-4, metavar='LR',
+parser.add_argument('--lr', type=lambda x: restricted_float(x, [1e-5, 0.5]), default=1e-4, metavar='LR',
                     help='Initial learning rate [1e-5, 5e-4] (default: 1e-4)')
 parser.add_argument('--lr-decay', type=lambda x: restricted_float(x, [.01, 1]), default=0.6, metavar='LR-DECAY',
                     help='Learning rate decay factor [.01, 1] (default: 0.6)')
@@ -93,8 +93,11 @@ def main():
         
     train_ids, train_classes, valid_ids, valid_classes, test_ids, test_classes = divide_datasets(files, classes)
 
+    del valid_classes, valid_ids
+
+    num_classes = max(train_classes + test_classes) + 1
+
     data_train = datasets.MUTAG(root, train_ids, train_classes)
-    data_valid = datasets.MUTAG(root, valid_ids, valid_classes)
     data_test = datasets.MUTAG(root, test_ids, test_classes)
     
     # Define model and optimizer
@@ -104,21 +107,18 @@ def main():
     g, h_t, e = g_tuple
     
     print('\tStatistics')
-    stat_dict = datasets.utils.get_graph_stats(data_valid, ['degrees'])
+    stat_dict = datasets.utils.get_graph_stats(data_train, ['degrees'])
 
     # Data Loader
     train_loader = torch.utils.data.DataLoader(data_train,
                                                batch_size=20, shuffle=True, collate_fn=datasets.utils.collate_g,
-                                               num_workers=args.prefetch, pin_memory=True)
-    valid_loader = torch.utils.data.DataLoader(data_valid,
-                                               batch_size=20, shuffle=False, collate_fn=datasets.utils.collate_g,
                                                num_workers=args.prefetch, pin_memory=True)
     test_loader = torch.utils.data.DataLoader(data_test,
                                               batch_size=20, shuffle=False, collate_fn=datasets.utils.collate_g,
                                               num_workers=args.prefetch, pin_memory=True)
 
     print('\tCreate model')
-    model = Nmp(stat_dict['degrees'], [len(h_t[0]), len(list(e.values())[0])], [25, 30, 35], 1)
+    model = Nmp1(stat_dict['degrees'], [len(h_t[0]), len(list(e.values())[0])], [25, 30, 35, 40], num_classes)
 
     print('Check cuda')
     if args.cuda:
@@ -126,8 +126,10 @@ def main():
 
     print('Optimizer')
     optimizer = optim.Adam(model.parameters(), lr=args.lr)
-    criterion = nn.MSELoss()
-    evaluation = nn.L1Loss()
+    criterion = nn.CrossEntropyLoss()
+    if args.cuda:
+        criterion = criterion.cuda()
+    evaluation = utils.accuracy
 
     print('Logger')
     logger = Logger(args.logPath)
@@ -146,118 +148,103 @@ def main():
         train(train_loader, model, criterion, optimizer, epoch, evaluation, logger)
 
         # evaluate on validation set
-        validate(valid_loader, model, criterion, evaluation, logger)
+        validate(test_loader, model, criterion, evaluation, logger)
 
 
 def train(train_loader, model, criterion, optimizer, epoch, evaluation, logger):
     batch_time = AverageMeter()
     data_time = AverageMeter()
     losses = AverageMeter()
-    error_ratio = AverageMeter()
+    accuracies = AverageMeter()
 
     # switch to train mode
     model.train()
 
     end = time.time()
-    for i, batch in enumerate(train_loader):
+    for i, (g, h, e, target) in enumerate(train_loader):
 
-        # measure data loading time
+        # Prepare input data
+        if args.cuda:
+            g, h, e, target = g.cuda(), h.cuda(), e.cuda(), target.cuda()
+        g, h, e, target = Variable(g), Variable(h), Variable(e), Variable(target)
+
+        # Measure data loading time
         data_time.update(time.time() - end)
 
-        train_loss = Variable(torch.zeros(1, 1)).cuda()
+        optimizer.zero_grad()
 
-        # Iterate batch
-        for (input_var, target) in batch:
-            # Prepare input
-            target_var = Variable(target.cuda())
+        # Compute output
+        output = model(g, h, e)
+        train_loss = criterion(output, torch.squeeze(target.type(torch.cuda.LongTensor)))
+        acc = Variable(evaluation(output.data, target, topk=(1,))[0])
 
-            g, h_in, e = input_var
-            h_in = Variable(h_in.cuda())
-            e = {k: Variable(v.cuda()) for k, v in e.items()}
-
-            # Compute output
-            output = model(g, h_in, e)
-            loss = criterion(output, target_var)
-            train_loss += loss
-            
-            # Logs            
-            losses.update(loss.data[0])
-            error_ratio.update(evaluation(output, target_var).data[0])
+        # Logs
+        losses.update(train_loss.data[0], g.size(0))
+        accuracies.update(acc.data[0], g.size(0))
 
         # compute gradient and do SGD step
-        optimizer.zero_grad()
         train_loss.backward()
         optimizer.step()
 
-        # measure elapsed time
+        # Measure elapsed time
         batch_time.update(time.time() - end)
         end = time.time()
 
         if i % args.log_interval == 0:
-            logger.log_value('train_batch_loss', losses.avg)
-            logger.log_value('train_batch_error_ratio', error_ratio.avg)
-            logger.log_value('train_batch_time', batch_time.avg).step()
-            
             print('Epoch: [{0}][{1}/{2}]\t'
                   'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
                   'Data {data_time.val:.3f} ({data_time.avg:.3f})\t'
                   'Loss {loss.val:.4f} ({loss.avg:.4f})\t'
-                  'Error Ratio {err.val:.4f} ({err.avg:.4f})'
+                  'Accuracy {acc.val:.4f} ({acc.avg:.4f})'
                   .format(epoch, i, len(train_loader), batch_time=batch_time,
-                          data_time=data_time, loss=losses, err=error_ratio))
-                          
+                          data_time=data_time, loss=losses, acc=accuracies))
+
     logger.log_value('train_epoch_loss', losses.avg)
-    logger.log_value('train_epoch_error_ratio', error_ratio.avg)
+    logger.log_value('train_epoch_accuracy', accuracies.avg)
 
 
 def validate(val_loader, model, criterion, evaluation, logger):
     batch_time = AverageMeter()
     losses = AverageMeter()
-    error_ratio = AverageMeter()
+    accuracies = AverageMeter()
 
     # switch to evaluate mode
     model.eval()
 
     end = time.time()
-    for i, batch in enumerate(val_loader):
+    for i, (g, h, e, target) in enumerate(val_loader):
 
-        # Iterate batch
-        for (input_var, target) in batch:
+        # Prepare input data
+        if args.cuda:
+            g, h, e, target = g.cuda(), h.cuda(), e.cuda(), target.cuda()
+        g, h, e, target = Variable(g), Variable(h), Variable(e), Variable(target)
 
-            # Prepare input
-            target_var = Variable(target.cuda())
+        # Compute output
+        output = model(g, h, e)
 
-            g, h_in, e = input_var
-            h_in = Variable(h_in.cuda())
-            e = {k: Variable(v.cuda()) for k, v in e.items()}
-
-            # Compute output
-            output = model(g, h_in, e)
-
-            # Logs
-            losses.update(criterion(output, target_var).data[0])
-            error_ratio.update(evaluation(output, target_var).data[0])
+        # Logs
+        losses.update(criterion(output, torch.squeeze(target.type(torch.cuda.LongTensor))).data[0])
+        acc = Variable(evaluation(output.data, target, topk=(1,))[0])
+        accuracies.update(acc.data[0])
 
         # measure elapsed time
         batch_time.update(time.time() - end)
         end = time.time()
 
         if i % args.log_interval == 0:
-            
             print('Test: [{0}/{1}]\t'
                   'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
                   'Loss {loss.val:.4f} ({loss.avg:.4f})\t'
-                  'Error Ratio {err.val:.4f} ({err.avg:.4f})'
+                  'Accuracy {acc.val:.4f} ({acc.avg:.4f})'
                   .format(i, len(val_loader), batch_time=batch_time,
-                          loss=losses, err=error_ratio))
+                          loss=losses, acc=accuracies))
 
-    print(' * Average Error Ratio {err.avg:.3f}'
-          .format(err=error_ratio))
-          
-    logger.log_value('test_batch_loss', losses.avg)
-    logger.log_value('test_batch_error_ratio', error_ratio.avg)
-    logger.log_value('test_batch_time', batch_time.avg).step()
-          
+    print(' * Average Accuracy {acc.avg:.3f}'
+          .format(acc=accuracies))
+
+    logger.log_value('test_epoch_loss', losses.avg)
+    logger.log_value('test_epoch_accuracy', accuracies.avg)
+    logger.log_value('test_epoch_time', batch_time.avg).step()
     
 if __name__ == '__main__':
     main()

@@ -18,6 +18,9 @@ dtype = torch.FloatTensor
 
 
 class Nmp(nn.Module):
+    """
+    in_n (size_v, size_e)
+    """
     def __init__(self, d, in_n, out, l_target):
         super(Nmp, self).__init__()
 
@@ -30,7 +33,7 @@ class Nmp(nn.Module):
         # Define Update 1 & 2
         self.u = nn.ModuleList([
                 UpdateFunction('duvenaud', args={'deg': d, 'in': self.m[0].get_out_size(in_n[0], in_n[1]), 'out': out[0]}),
-                UpdateFunction('duvenaud', args={'deg': d, 'in': self.m[0].get_out_size(out[0], in_n[1]), 'out': out[1]})
+                UpdateFunction('duvenaud', args={'deg': d, 'in': self.m[1].get_out_size(out[0], in_n[1]), 'out': out[1]})
             ])
 
         # Define Readout
@@ -94,18 +97,20 @@ class Nmp1(nn.Module):
         # Define message 1 & 2
         self.m = nn.ModuleList([
                 MessageFunction('duvenaud'),
+                MessageFunction('duvenaud'),
                 MessageFunction('duvenaud')
             ])
 
         # Define Update 1 & 2
         self.u = nn.ModuleList([
                 UpdateFunction('duvenaud', args={'deg': d, 'in': self.m[0].get_out_size(in_n[0], in_n[1]), 'out': out[0]}),
-                UpdateFunction('duvenaud', args={'deg': d, 'in': self.m[0].get_out_size(out[0], in_n[1]), 'out': out[1]})
+                UpdateFunction('duvenaud', args={'deg': d, 'in': self.m[1].get_out_size(out[0], in_n[1]), 'out': out[1]}),
+                UpdateFunction('duvenaud', args={'deg': d, 'in': self.m[2].get_out_size(out[1], in_n[1]), 'out': out[2]})
             ])
 
         # Define Readout
         self.r = ReadoutFunction('duvenaud',
-                                 args={'layers': len(self.m) + 1, 'in': [in_n[0], out[0], out[1]], 'out': out[2],
+                                 args={'layers': len(self.m) + 1, 'in': [in_n[0], out[0], out[1], out[2]], 'out': out[3],
                                        'target': l_target})
 
     def forward(self, g, h_in, e):

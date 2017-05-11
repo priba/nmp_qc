@@ -85,16 +85,16 @@ def main():
 
     print('Prepare files')
     
-    train_classes, train_ids = read_2cols_set_files(os.path.join(root,'Set/Train.txt'))
-    valid_classes, valid_ids = read_2cols_set_files(os.path.join(root,'Set/Valid.txt'))
-    test_classes, test_ids = read_2cols_set_files(os.path.join(root,'Set/Test.txt'))    
+    train_classes, train_ids = read_2cols_set_files(os.path.join(root, 'Set/Train.txt'))
+    valid_classes, valid_ids = read_2cols_set_files(os.path.join(root, 'Set/Valid.txt'))
+    test_classes, test_ids = read_2cols_set_files(os.path.join(root,'Set/Test.txt'))
     
     train_classes, valid_classes, test_classes = create_numeric_classes(train_classes, valid_classes, test_classes)
+
+    del valid_classes, valid_ids
     
-    num_classes = max(train_classes+valid_classes+test_classes) + 1
-    
+    num_classes = max(train_classes + test_classes) + 1
     data_train = datasets.GWHISTOGRAPH(root, subset, train_ids, train_classes, num_classes)
-    data_valid = datasets.GWHISTOGRAPH(root, subset, valid_ids, valid_classes, num_classes)
     data_test = datasets.GWHISTOGRAPH(root, subset, test_ids, test_classes, num_classes)
     
     # Define model and optimizer
@@ -110,15 +110,12 @@ def main():
     train_loader = torch.utils.data.DataLoader(data_train,
                                                batch_size=args.batch_size, shuffle=True, collate_fn=datasets.utils.collate_g,
                                                num_workers=args.prefetch, pin_memory=True)
-    valid_loader = torch.utils.data.DataLoader(data_valid,
-                                               batch_size=args.batch_size, shuffle=False, collate_fn=datasets.utils.collate_g,
-                                               num_workers=args.prefetch, pin_memory=True)
     test_loader = torch.utils.data.DataLoader(data_test,
                                               batch_size=args.batch_size, shuffle=False, collate_fn=datasets.utils.collate_g,
                                               num_workers=args.prefetch, pin_memory=True)
 
     print('\tCreate model')
-    model = Nmp1(stat_dict['degrees'], [len(h_t[0]), len(list(e.values())[0])], [25, 30, 35], num_classes)
+    model = Nmp1(stat_dict['degrees'], [len(h_t[0]), len(list(e.values())[0])], [25, 30, 35, 40], num_classes)
 
     print('Check cuda')
     if args.cuda:
@@ -147,8 +144,8 @@ def main():
         # train for one epoch
         train(train_loader, model, criterion, optimizer, epoch, evaluation, logger)
 
-        # evaluate on validation set
-        validate(valid_loader, model, criterion, evaluation, logger)
+        # evaluate on test set
+        validate(test_loader, model, criterion, evaluation, logger)
 
 
 def train(train_loader, model, criterion, optimizer, epoch, evaluation, logger):

@@ -23,37 +23,48 @@ __email__ = "priba@cvc.uab.cat, adutta@cvc.uab.cat"
 
 class MUTAG(data.Dataset):
     
-    def __init__(self, root_path, ids, classes, vertex_transform=utils.mutag_nodes, edge_transform=utils.mutag_edges,
-                 target_transform=None):
+    def __init__(self, root_path, ids, classes):
         
         self.root = root_path
         self.classes = classes
         self.ids = ids
-        self.vertex_transform = vertex_transform
-        self.edge_transform = edge_transform
-        self.target_transform = target_transform
         
     def __getitem__(self, index):
-                
+
+        #TODO: Manually have to check the convert_node_labels_to_integers function
         g = nx.convert_node_labels_to_integers(nx.read_graphml(os.path.join(self.root, self.ids[index])))
+
         target = self.classes[index]
-        
-        h = []
-        if self.vertex_transform is not None:
-            h = self.vertex_transform(g)
 
-        e = []
-        if self.edge_transform is not None:
-            g, e = self.edge_transform(g)
-            g = g.adjacency_list()
+        h = self.vertex_transform(g)
 
-        if self.target_transform is not None:
-            target = self.target_transform(target)
+        g, e = self.edge_transform(g)
+
+        target = self.target_transform(target)
 
         return (g, h, e), target
         
     def __len__(self):
         return len(self.ids)
+
+    def vertex_transform(self, g):
+        h = []
+        for n, d in g.nodes_iter(data=True):
+            h_t = []
+            h_t.append(d['label'])
+            h.append(h_t)
+        return h
+
+    def edge_transform(self, g):
+        e = {}
+        for n1, n2, d in g.edges_iter(data=True):
+            e_t = []
+            e_t.append(d['label'])
+            e[(n1, n2)] = e_t
+        return nx.to_numpy_matrix(g), e
+
+    def target_transform(self, target):
+        return [target]
     
 if __name__ == '__main__':
 
