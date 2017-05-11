@@ -49,7 +49,8 @@ class ReadoutFunction(nn.Module):
         self.r_definition = readout_def.lower()
 
         self.r_function = {
-                    'duvenaud': self.r_duvenaud
+                    'duvenaud': self.r_duvenaud,
+                    'ggnn': self.r_ggnn
                 }.get(self.r_definition, None)
 
         if self.r_function is None:
@@ -57,7 +58,8 @@ class ReadoutFunction(nn.Module):
             quit()
 
         self.learn_args, self.learn_modules, self.args = {
-                    'duvenaud': self.init_duvenaud(args)
+                    'duvenaud': self.init_duvenaud(args),
+                    'ggnn': self.init_ggnn(args)
                 }.get(self.r_definition, (nn.ParameterList([]),nn.ModuleList([]),{}))
 
     # Get the name of the used readout function
@@ -97,6 +99,27 @@ class ReadoutFunction(nn.Module):
 
         learn_modules.append(nn.Linear(params['out'], params['target']))
         return nn.ParameterList(learn_args), nn.ModuleList(learn_modules), args
+
+    # GG-NN, Li et al.
+    def r_ggnn(self, h):
+
+        aux = self.learn_modules[0](torch.cat([h[0], h[-1]], 2))*self.learn_modules[1](h[-1])
+        aux = nn.Sigmoid()(aux)
+
+        return torch.sum(aux)
+
+    def init_ggnn(self, params):
+        learn_args = []
+        learn_modules = []
+        args = {}
+
+        # i
+        learn_modules.append(nn.Linear(params['out'], params['target']))
+        # j
+        learn_modules.append(nn.Linear(params['out'], params['target']))
+
+        return nn.ParameterList(learn_args), nn.ModuleList(learn_modules), args
+
 
 if __name__ == '__main__':
     # Parse optios for downloading
