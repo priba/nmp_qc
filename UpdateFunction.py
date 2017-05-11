@@ -22,6 +22,7 @@ import argparse
 import torch
 
 import torch.nn as nn
+import torch.nn.functional as F
 
 #dtype = torch.cuda.FloatTensor
 dtype = torch.FloatTensor
@@ -90,6 +91,22 @@ class UpdateFunction(nn.Module):
 
         # Define a parameter matrix H for each degree.
         learn_args.append(torch.nn.Parameter(torch.randn(len(params['deg']),params['in'], params['out'])))
+
+        return nn.ParameterList(learn_args), nn.ModuleList(learn_modules), args
+
+        # GG-NN, Li et al.
+    def u_ggnn(self, h_v, m_v, opt):
+        return self.learn_modules[0](m_v, F.pad(h_v, pad=(0, 0, self.args['padding'])))[0]
+
+    def init_ggnn(self, params):
+        learn_args = []
+        learn_modules = []
+        args = {}
+
+        args['padding'] = params['padding']
+
+        # GRU
+        learn_modules.append(nn.GRU(params['input_sz'], params['hidden_sz'], batch_first=True))
 
         return nn.ParameterList(learn_args), nn.ModuleList(learn_modules), args
 
