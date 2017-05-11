@@ -94,6 +94,7 @@ data/enzymes/*
 data/qm9/*
 data/data_graphml/*
 data/Washington_DB_1.0/*
+data/GWHistoGraphs/*
 
 # log
 log/*
