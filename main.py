@@ -131,7 +131,7 @@ def main():
                                               )
 
     print('\tCreate model')
-    model = NMP_GGNN(stat_dict['edge_labels'], [len(h_t[0]), len(list(e.values())[0])], [25, 30, 35], len(l))
+    model = NMP_GGNN(stat_dict['edge_labels'], len(h_t[0]), [25, 30, 35], len(l))
 
     print('Check cuda')
     if args.cuda:

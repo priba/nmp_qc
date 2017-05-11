@@ -102,8 +102,8 @@ class NMP_GGNN(nn.Module):
         n_layers = len(out)
 
         # Define message 1 & 2
-        self.m = nn.ModuleList([MessageFunction('ggnn',
-                                                args={'e_labels': d, 'in': self.m[i]}) for _ in range(n_layers)])
+        self.m = nn.ModuleList([MessageFunction('ggnn', args={'e_labels': d, 'in': in_n, 'out': in_n})
+                                for _ in range(n_layers)])
 
         # Define Update 1 & 2
         self.u = nn.ModuleList([UpdateFunction('ggnn',
