@@ -57,10 +57,12 @@ class UpdateFunction(nn.Module):
         if self.u_function is None:
             print('WARNING!: Update Function has not been set correctly\n\tIncorrect definition ' + update_def)
 
-        self.learn_args, self.learn_modules, self.args = {
-            'duvenaud':     self.init_duvenaud(args),
-            'ggnn':         self.init_ggnn(args)
-        }.get(self.u_definition, (nn.ParameterList([]), nn.ModuleList([]), {}))
+        init_parameters = {
+            'duvenaud':     self.init_duvenaud,
+            'ggnn':         self.init_ggnn
+        }.get(self.u_definition, lambda x: (nn.ParameterList([]), nn.ModuleList([]), {}))
+
+        self.learn_args, self.learn_modules, self.args = init_parameters(args)
 
     # Get the name of the used update function
     def get_definition(self):

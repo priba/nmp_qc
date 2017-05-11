@@ -57,10 +57,12 @@ class ReadoutFunction(nn.Module):
             print('WARNING!: Readout Function has not been set correctly\n\tIncorrect definition ' + readout_def)
             quit()
 
-        self.learn_args, self.learn_modules, self.args = {
-                    'duvenaud': self.init_duvenaud(args),
-                    'ggnn': self.init_ggnn(args)
-                }.get(self.r_definition, (nn.ParameterList([]),nn.ModuleList([]),{}))
+        init_parameters = {
+            'duvenaud': self.init_duvenaud,
+            'ggnn': self.init_ggnn
+        }.get(self.r_definition, lambda x: (nn.ParameterList([]), nn.ModuleList([]), {}))
+
+        self.learn_args, self.learn_modules, self.args = init_parameters(args)
 
     # Get the name of the used readout function
     def get_definition(self):
