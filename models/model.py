@@ -21,23 +21,23 @@ class NMP_Duvenaud(nn.Module):
     """
     in_n (size_v, size_e)
     """
-    def __init__(self, d, in_n, out, l_target, type='regression'):
+    def __init__(self, d, in_n, out_update, hidden_state_readout, l_target, type='regression'):
         super(NMP_Duvenaud, self).__init__()
 
-        n_layers = len(out)
+        n_layers = len(out_update)
 
         # Define message 1 & 2
         self.m = nn.ModuleList([MessageFunction('duvenaud') for _ in range(n_layers)])
 
         # Define Update 1 & 2
-        self.u = nn.ModuleList([UpdateFunction('duvenaud', args={'deg': d, 'in': self.m[i].get_out_size(in_n[0], in_n[1]), 'out': out[0]}) if i == 0 else
-                                UpdateFunction('duvenaud', args={'deg': d, 'in': self.m[i].get_out_size(out[i-1], in_n[1]), 'out': out[i]}) for i in range(n_layers)])
+        self.u = nn.ModuleList([UpdateFunction('duvenaud', args={'deg': d, 'in': self.m[i].get_out_size(in_n[0], in_n[1]), 'out': out_update[0]}) if i == 0 else
+                                UpdateFunction('duvenaud', args={'deg': d, 'in': self.m[i].get_out_size(out_update[i-1], in_n[1]), 'out': out_update[i]}) for i in range(n_layers)])
 
         # Define Readout
         self.r = ReadoutFunction('duvenaud',
                                  args={'layers': len(self.m) + 1,
-                                       'in': [in_n[0] if i == 0 else out[i-1] for i in range(n_layers+1)],
-                                       'out': out[n_layers-1],
+                                       'in': [in_n[0] if i == 0 else out_update[i-1] for i in range(n_layers+1)],
+                                       'out': hidden_state_readout,
                                        'target': l_target})
 
         self.type = type
@@ -57,7 +57,7 @@ class NMP_Duvenaud(nn.Module):
             # Apply one layer pass (Message + Update)
             for v in range(0, h_in.size(1)):
 
-                m = self.m[t].forward(h[t][:, v], h[t], e[:, v, :])
+                m = self.m[t].forward(h[t][:, v, :], h[t], e[:, v, :])
 
                 # Nodes without edge set message to 0
                 m = g[:, v, :, None].expand_as(m) * m
@@ -78,7 +78,6 @@ class NMP_Duvenaud(nn.Module):
                     if len(ind) != 0:
                         aux = self.u[t].forward(torch.index_select(h[t].clone(), 0, ind)[:, v, :], torch.index_select(m.clone(), 0, ind), opt)
 
-                        torch.index_select(h_t, 0, ind)[:, v, :] = torch.squeeze(aux)
                         ind = ind.data.cpu().numpy()
                         for j in range(len(ind)):
                            h_t[ind[j], v, :] = aux[j, :]
@@ -93,31 +92,33 @@ class NMP_Duvenaud(nn.Module):
 
 class NMP_GGNN(nn.Module):
     """
-    in_n (size_v, size_e)
+        in_n (size_v, size_e)
     """
 
-    def __init__(self, d, in_n, out, l_target, type='regression'):
+    def __init__(self, d, in_n, out_message, out_update, hidden_state_readout, l_target, type='regression'):
         super(NMP_GGNN, self).__init__()
 
-        n_layers = len(out)
+        n_layers = len(out_message)
 
-        # Define message 1 & 2
-        self.m = nn.ModuleList([MessageFunction('ggnn',
-                                                args={'e_labels': d, 'in': self.m[i]}) for _ in range(n_layers)])
+        # Define message
+        self.m = nn.ModuleList([MessageFunction('ggnn', args={'e_label': d, 'in': in_n[0], 'out': out_message[i]})
+                                if i == 0 else
+                                MessageFunction('ggnn', args={'e_label': d, 'in': out_update[i-1], 'out': out_message[i]})
+                                for i in range(n_layers)])
 
-        # Define Update 1 & 2
+        # Define Update
         self.u = nn.ModuleList([UpdateFunction('ggnn',
-                                               args={'e_labels': d, 'in': self.m[i].get_out_size(in_n[0], in_n[1]),
-                                                     'out': out[0]}) if i == 0 else
+                                               args={'in_m': self.m[i].get_out_size(in_n[0], in_n[1]),
+                                                     'out': out_update[i]})
+                                if i == 0 else
                                 UpdateFunction('ggnn',
-                                               args={'e_labels': d, 'in': self.m[i].get_out_size(out[i - 1], in_n[1]),
-                                                     'out': out[i]}) for i in range(n_layers)])
+                                               args={'in_m': self.m[i].get_out_size(out_update[i - 1], in_n[1]),
+                                                     'out': out_update[i]})
+                                for i in range(n_layers)])
 
         # Define Readout
         self.r = ReadoutFunction('ggnn',
-                                 args={'layers': len(self.m) + 1,
-                                       'in': [in_n[0] if i == 0 else out[i - 1] for i in range(n_layers)],
-                                       'out': out[n_layers - 1],
+                                 args={'in': [in_n[0], out_update[-1]],
                                        'target': l_target})
 
         self.type = type
@@ -136,7 +137,7 @@ class NMP_GGNN(nn.Module):
             for v in range(0, h_in.size(1)):
                 # Separate edge labels
                 for i in range(len(m_args['label'])):
-                    ind = labels == m_args['label'][i]
+                    ind = [0] == m_args['label'][i]
                     ind = Variable(torch.squeeze(torch.nonzero(torch.squeeze(ind))))
                     if len(ind) != 0:
                         opt = {'label': i}
@@ -151,7 +152,6 @@ class NMP_GGNN(nn.Module):
                 # Update
                 h_t = self.u[t].forward(h[t], m, opt)
 
-
             h.append(h_t.clone())
 
         # Readout
@@ -159,7 +159,6 @@ class NMP_GGNN(nn.Module):
         if self.type == 'classification':
             res = nn.Softmax()(res)
         return res
-
 
 class Nmp1(nn.Module):
     def __init__(self, d, in_n, out, l_target):

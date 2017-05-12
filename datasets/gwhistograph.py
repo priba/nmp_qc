@@ -65,7 +65,7 @@ class GWHISTOGRAPH(data.Dataset):
         e = {}
         for n1, n2, d in g.edges_iter(data=True):
             e_t = []
-            e_t += [10]
+            e_t += [1]
             e[(n1, n2)] = e_t
         return nx.to_numpy_matrix(g), e
     

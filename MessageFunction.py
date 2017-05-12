@@ -94,21 +94,31 @@ class MessageFunction(nn.Module):
         return learn_args, learn_modules, args
 
     # Li et al. (2016), Gated Graph Neural Networks (GG-NN)
-    def m_ggnn(self, h_v, h_w, e_vw, args):
-        m = torch.mm(args.edge_mat(e_vw), torch.t(h_w))
-        return m
+    def m_ggnn(self,  h_w, e_vw, opt):
+
+        param_sz = self.learn_args[0][opt['deg']].size()
+        parameter_mat = torch.t(self.learn_args[0][opt['deg']])[None, ...].expand(m_v.size(0), param_sz[1], param_sz[0])
+
+        aux = torch.bmm(parameter_mat, torch.transpose(h_w, 1, 2))
+
+        return torch.transpose(torch.nn.Sigmoid()(aux), 1, 2)
 
     def out_ggnn(self, size_h, size_e, args):
-        pass
-
+        return self.args['out']
 
     def init_ggnn(self, params):
-        pass
-        # Define a parameter matrix A for each degree.
-        # learn_args.append(torch.nn.Parameter(torch.randn(len(params['e_labels']), params['in'], params['out'])))
-        #
-        # return nn.ParameterList(learn_args), nn.ModuleList(learn_modules), args
+        learn_args = []
+        learn_modules = []
+        args = {}
 
+        args['e_label'] = params['e_label']
+        args['in'] = params['in']
+        args['out'] = params['out']
+
+        # Define a parameter matrix A for each degree.
+        learn_args.append(torch.nn.Parameter(torch.randn(len(params['e_label']), params['in'], params['out'])))
+
+        return nn.ParameterList(learn_args), nn.ModuleList(learn_modules), args
 
     # Battaglia et al. (2016), Interaction Networks
     def m_intnet(self, h_v, h_w, e_vw, args):
@@ -139,7 +149,6 @@ class MessageFunction(nn.Module):
         # TODO
         m = []
         return m
-
 
 if __name__ == '__main__':
     # Parse optios for downloading

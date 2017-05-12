@@ -14,6 +14,7 @@ from __future__ import print_function
 import datasets
 from MessageFunction import MessageFunction
 from UpdateFunction import UpdateFunction
+from models.nnet import NNet
 
 import time
 import torch
@@ -83,7 +84,7 @@ class ReadoutFunction(nn.Module):
 
             for j in range(0, aux[l].size(1)):
                 # Mask whole 0 vectors
-                aux[l][:, j, :] = nn.Softmax()(aux[l][:, j, :].clone())*(torch.sum(aux[l][:, j, :] > 0, 1) > 0).expand_as(aux[l][:, j, :]).type_as(aux[l])
+                aux[l][:, j, :] = nn.Softmax()(aux[l][:, j, :].clone())*(torch.sum(aux[l][:, j, :] != 0, 1) > 0).expand_as(aux[l][:, j, :]).type_as(aux[l])
 
         aux = torch.sum(torch.sum(torch.stack(aux, 3), 3), 1)
         return self.learn_modules[0](torch.squeeze(aux))
@@ -99,7 +100,9 @@ class ReadoutFunction(nn.Module):
         for l in range(params['layers']):
             learn_args.append(nn.Parameter(torch.randn(params['in'][l], params['out'])))
 
-        learn_modules.append(nn.Linear(params['out'], params['target']))
+        # learn_modules.append(nn.Linear(params['out'], params['target']))
+
+        learn_modules.append(NNet(n_in=params['out'], n_out=params['target']))
         return nn.ParameterList(learn_args), nn.ModuleList(learn_modules), args
 
     # GG-NN, Li et al.
