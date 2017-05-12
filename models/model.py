@@ -95,49 +95,47 @@ class NMP_GGNN(nn.Module):
         in_n (size_v, size_e)
     """
 
-    def __init__(self, d, in_n, out_message, out_update, hidden_state_readout, l_target, type='regression'):
+    def __init__(self, d, in_n, hidden_state_size, message_size, n_layers, l_target, type='regression'):
         super(NMP_GGNN, self).__init__()
 
-        n_layers = len(out_message)
-
         # Define message
-        self.m = nn.ModuleList([MessageFunction('ggnn', args={'e_label': d, 'in': in_n[0], 'out': out_message[i]})
-                                if i == 0 else
-                                MessageFunction('ggnn', args={'e_label': d, 'in': out_update[i-1], 'out': out_message[i]})
-                                for i in range(n_layers)])
+        self.m = nn.ModuleList([MessageFunction('ggnn', args={'e_label': d, 'in': hidden_state_size, 'out': message_size})])
 
         # Define Update
-        self.u = nn.ModuleList([UpdateFunction('ggnn',
-                                               args={'in_m': self.m[i].get_out_size(in_n[0], in_n[1]),
-                                                     'out': out_update[i]})
-                                if i == 0 else
-                                UpdateFunction('ggnn',
-                                               args={'in_m': self.m[i].get_out_size(out_update[i - 1], in_n[1]),
-                                                     'out': out_update[i]})
-                                for i in range(n_layers)])
+        self.u = nn.ModuleList([UpdateFunction(  'ggnn',
+                                                args={'in_m': message_size,
+                                                'out': hidden_state_size})])
 
         # Define Readout
         self.r = ReadoutFunction('ggnn',
-                                 args={'in': [in_n[0], out_update[-1]],
+                                 args={'in': hidden_state_size,
                                        'target': l_target})
 
         self.type = type
 
+        self.args = {}
+        self.args['out'] = hidden_state_size
+
+        self.n_layers = n_layers
+
     def forward(self, g, h_in, e):
 
         h = []
-        h.append(h_in)
+
+        # Padding to some larger dimension d
+        h_t = torch.cat([h_in, Variable(torch.Tensor(h_in.size(0), h_in.size(1), self.args['out'] - h_in.size(2)).type_as(h_in.data).zero_())], 2)
+
+        h.append(h_t.clone())
 
         # Layer
-        for t in range(0, len(self.m)):
+        for t in range(0, self.n_layers):
 
-            u_args = self.u[t].get_args()
-            h_t = Variable(torch.Tensor(np.zeros((h_in.size(0), h_in.size(1), u_args['out']))).type_as(h_in.data))
+            h_t = Variable(torch.Tensor(h[0].size(0), h[0].size(1), h[0].size(2)).type_as(h_in.data).zero_())
 
             # Apply one layer pass (Message + Update)
             for v in range(0, h_in.size(1)):
 
-                m = self.m[t].forward(h[t][:, v, :], h[t], e[:, v, :])
+                m = self.m[0].forward(h[t][:, v, :], h[t], e[:, v, :])
 
                 # Nodes without edge set message to 0
                 m = g[:, v, :, None].expand_as(m) * m
@@ -145,8 +143,10 @@ class NMP_GGNN(nn.Module):
                 m = torch.sum(m, 1)
 
                 # Update
-                h_t[:,v,:] = self.u[t].forward(h[t][:,v,:], m)
+                h_t[:,v,:] = self.u[0].forward(h[t][:,v,:], m)
 
+            # Delete virtual nodes
+            h_t = (torch.sum(h_in,2).expand_as(h_t)>0).type_as(h_t)*h_t
             h.append(h_t.clone())
 
         # Readout

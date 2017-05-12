@@ -109,7 +109,7 @@ class MessageFunction(nn.Module):
         h_new = Variable( torch.Tensor(h_w.size(0), h_w.size(1), self.args['out']).type_as(h_w.data) )
 
         for w in range(h_w.size(1)):
-            h_new[:,w,:] = torch.transpose(torch.bmm(torch.transpose(parameter_mat[:, w, :, :], 1, 2),
+            h_new[:,w,:] = torch.transpose(torch.bmm(torch.transpose(parameter_mat[:, w, :, :],1,2),
                                                      torch.transpose(torch.unsqueeze(h_w[:, w, :], 1), 1, 2)), 1, 2).clone()
 
         return h_new

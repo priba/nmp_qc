@@ -23,6 +23,7 @@ import os
 import argparse
 import numpy as np
 
+from torch.autograd.variable import Variable
 
 #dtype = torch.cuda.FloatTensor
 dtype = torch.FloatTensor
@@ -108,10 +109,17 @@ class ReadoutFunction(nn.Module):
     # GG-NN, Li et al.
     def r_ggnn(self, h):
 
-        aux = self.learn_modules[0](torch.cat([h[0], h[-1]], 2))*self.learn_modules[1](h[-1])
-        aux = nn.Sigmoid()(aux)
+        aux = Variable( torch.Tensor(h[0].size(0), self.args['out']).type_as(h[0].data).zero_() )
+        # For each graph
+        for i in range(h[0].size(0)):
+            nn_res = nn.Sigmoid()(self.learn_modules[0](torch.cat([h[0][i,:,:], h[-1][i,:,:]], 1)))*self.learn_modules[1](h[-1][i,:,:])
 
-        return torch.sum(aux)
+            # Delete virtual nodes
+            nn_res = (torch.sum(h[0][i,:,:],1).expand_as(nn_res)>0).type_as(nn_res)* nn_res
+
+            aux[i,:] = torch.sum(nn_res,0)
+
+        return aux
 
     def init_ggnn(self, params):
         learn_args = []
@@ -119,10 +127,12 @@ class ReadoutFunction(nn.Module):
         args = {}
 
         # i
-        learn_modules.append(NNet(n_in=sum(params['in']), n_out=params['target']))
+        learn_modules.append(NNet(n_in=2*params['in'], n_out=params['target']))
 
         # j
-        learn_modules.append(NNet(n_in=params['in'][1], n_out=params['target']))
+        learn_modules.append(NNet(n_in=params['in'], n_out=params['target']))
+
+        args['out'] = params['target']
 
         return nn.ParameterList(learn_args), nn.ModuleList(learn_modules), args
 

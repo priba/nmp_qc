@@ -100,9 +100,9 @@ class UpdateFunction(nn.Module):
 
         # GG-NN, Li et al.
     def u_ggnn(self, h_v, m_v, opt={}):
-        h_v_padded = torch.cat(
-            [h_v, Variable(torch.Tensor(h_v.size(0), self.args['out'] - h_v.size(1)).type_as(h_v.data).zero_())],1)
-        h_new = self.learn_modules[0](torch.transpose(m_v, 0, 1), torch.unsqueeze(h_v_padded, 0))[0] # 0 or 1???
+        h_v.contiguous()
+        m_v.contiguous()
+        h_new = self.learn_modules[0](torch.transpose(m_v, 0, 1), torch.unsqueeze(h_v, 0))[0] # 0 or 1???
         return torch.transpose(h_new,0,1)
 
     def init_ggnn(self, params):
