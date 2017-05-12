@@ -41,8 +41,8 @@ def restricted_float(x, inter):
 parser = argparse.ArgumentParser(description='Neural message passing')
 
 parser.add_argument('--dataset', default='qm9', help='QM9')
-parser.add_argument('--datasetPath', default='./data/qm9/dsgdb9nsd/', help='dataset path')
-parser.add_argument('--logPath', default='./log/', help='log path')
+parser.add_argument('--datasetPath', default='../data/qm9/dsgdb9nsd/', help='dataset path')
+parser.add_argument('--logPath', default='../log/', help='log path')
 # Optimization Options
 parser.add_argument('--batch-size', type=int, default=20, metavar='N',
                     help='Input batch size for training (default: 20)')

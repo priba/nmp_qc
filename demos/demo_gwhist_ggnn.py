@@ -12,7 +12,7 @@
 # Own Modules
 import datasets
 from datasets import utils
-from models.model import NMP_Duvenaud
+from models.model import NMP_GGNN
 from LogMetric import AverageMeter, Logger
 
 # Torch
@@ -48,9 +48,9 @@ def restricted_float(x, inter):
 parser = argparse.ArgumentParser(description='Neural message passing')
 
 parser.add_argument('--dataset', default='gwhistograph', help='GWHISTOGRAPH')
-parser.add_argument('--datasetPath', default='./data/GWHistoGraphs/', help='dataset path')
+parser.add_argument('--datasetPath', default='../data/GWHistoGraphs/', help='dataset path')
 parser.add_argument('--subSet', default='01_Keypoint', help='sub dataset')
-parser.add_argument('--logPath', default='./log/', help='log path')
+parser.add_argument('--logPath', default='../log/', help='log path')
 # Optimization Options
 parser.add_argument('--batch-size', type=int, default=20, metavar='N',
                     help='Input batch size for training (default: 20)')
@@ -108,7 +108,7 @@ def main():
     g, h_t, e = g_tuple
     
     print('\tStatistics')
-    stat_dict = datasets.utils.get_graph_stats(data_train, ['degrees'])
+    stat_dict = datasets.utils.get_graph_stats(data_train, ['edge_labels'])
 
     # Data Loader
     train_loader = torch.utils.data.DataLoader(data_train,
@@ -119,7 +119,7 @@ def main():
                                               num_workers=args.prefetch, pin_memory=True)
 
     print('\tCreate model')
-    model = NMP_Duvenaud(stat_dict['degrees'], [len(h_t[0]), len(list(e.values())[0])], [5, 15, 15], 30, num_classes, type='classification')
+    model = NMP_GGNN(stat_dict['edge_labels'], [len(h_t[0]), len(list(e.values())[0])], 25, 15, 2, len(l), type='classification')
 
     print('Check cuda')
     if args.cuda:
