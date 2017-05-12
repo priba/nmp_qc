@@ -92,6 +92,9 @@ def main():
     
     train_classes, valid_classes, test_classes = create_numeric_classes(train_classes, valid_classes, test_classes)
 
+    train_classes = train_classes + valid_classes
+    train_ids = train_ids + valid_ids
+
     del valid_classes, valid_ids
     
     num_classes = max(train_classes + test_classes) + 1
@@ -116,18 +119,19 @@ def main():
                                               num_workers=args.prefetch, pin_memory=True)
 
     print('\tCreate model')
-    model = NMP_Duvenaud(stat_dict['degrees'], [len(h_t[0]), len(list(e.values())[0])], [25, 30, 35, 40], num_classes, type='classification')
+    model = NMP_Duvenaud(stat_dict['degrees'], [len(h_t[0]), len(list(e.values())[0])], [5, 15, 15], 30, num_classes, type='classification')
 
     print('Check cuda')
     if args.cuda:
         model.cuda()
 
     print('Optimizer')
-    optimizer = optim.LBFGS(model.parameters())
-    # optimizer = optim.Adam(model.parameters(), lr=args.lr)
+    optimizer = optim.Adam(model.parameters(), lr=args.lr)
+
     criterion = nn.CrossEntropyLoss()
     if args.cuda:
         criterion = criterion.cuda()
+
     evaluation = utils.accuracy
 
     print('Logger')
@@ -251,8 +255,6 @@ def validate(val_loader, model, criterion, evaluation, logger):
           
     logger.log_value('test_epoch_loss', losses.avg)
     logger.log_value('test_epoch_accuracy', accuracies.avg)
-    logger.log_value('test_epoch_time', batch_time.avg)
-          
     
 if __name__ == '__main__':
     main()

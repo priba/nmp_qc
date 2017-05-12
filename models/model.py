@@ -21,20 +21,99 @@ class NMP_Duvenaud(nn.Module):
     """
     in_n (size_v, size_e)
     """
-    def __init__(self, d, in_n, out, l_target, type='regression'):
+    def __init__(self, d, in_n, out_update, hidden_state_readout, l_target, type='regression'):
         super(NMP_Duvenaud, self).__init__()
 
-        n_layers = len(out)
+        n_layers = len(out_update)
 
         # Define message 1 & 2
         self.m = nn.ModuleList([MessageFunction('duvenaud') for _ in range(n_layers)])
 
         # Define Update 1 & 2
-        self.u = nn.ModuleList([UpdateFunction('duvenaud', args={'deg': d, 'in': self.m[i].get_out_size(in_n[0], in_n[1]), 'out': out[0]}) if i == 0 else
-                                UpdateFunction('duvenaud', args={'deg': d, 'in': self.m[i].get_out_size(out[i-1], in_n[1]), 'out': out[i]}) for i in range(n_layers)])
+        self.u = nn.ModuleList([UpdateFunction('duvenaud', args={'deg': d, 'in': self.m[i].get_out_size(in_n[0], in_n[1]), 'out': out_update[0]}) if i == 0 else
+                                UpdateFunction('duvenaud', args={'deg': d, 'in': self.m[i].get_out_size(out_update[i-1], in_n[1]), 'out': out_update[i]}) for i in range(n_layers)])
 
         # Define Readout
         self.r = ReadoutFunction('duvenaud',
+                                 args={'layers': len(self.m) + 1,
+                                       'in': [in_n[0] if i == 0 else out_update[i-1] for i in range(n_layers+1)],
+                                       'out': hidden_state_readout,
+                                       'target': l_target})
+
+        self.type = type
+
+    def forward(self, g, h_in, e):
+
+        h = []
+        h.append(h_in)
+
+        # Layer
+        for t in range(0, len(self.m)):
+
+            u_args = self.u[t].get_args()
+
+            h_t = Variable(torch.Tensor(np.zeros((h_in.size(0), h_in.size(1), u_args['out']))).type(h[t].data.type()))
+
+            # Apply one layer pass (Message + Update)
+            for v in range(0, h_in.size(1)):
+
+                m = self.m[t].forward(h[t][:, v, :], h[t], e[:, v, :])
+
+                # Nodes without edge set message to 0
+                m = g[:, v, :, None].expand_as(m) * m
+
+                m = torch.sum(m, 1)
+
+                # Duvenaud
+                deg = torch.sum(g[:, v, :].data, 1)
+
+                for i in range(len(u_args['deg'])):
+                    ind = deg == u_args['deg'][i]
+                    ind = Variable(torch.squeeze(torch.nonzero(torch.squeeze(ind))))
+
+                    opt = {'deg': i}
+
+                    # Separate degrees
+                    # Update
+                    if len(ind) != 0:
+                        aux = self.u[t].forward(torch.index_select(h[t].clone(), 0, ind)[:, v, :], torch.index_select(m.clone(), 0, ind), opt)
+
+                        ind = ind.data.cpu().numpy()
+                        for j in range(len(ind)):
+                           h_t[ind[j], v, :] = aux[j, :]
+
+            h.append(h_t.clone())
+        # Readout
+        res = self.r.forward(h)
+        if self.type == 'classification':
+            res = nn.Softmax()(res)
+        return res
+
+
+class NMP_GGNN(nn.Module):
+    """
+    in_n (size_v, size_e)
+    """
+
+    def __init__(self, d, in_n, out, l_target, type='regression'):
+        super(NMP_GGNN, self).__init__()
+
+        n_layers = len(out)
+
+        # Define message 1 & 2
+        self.m = nn.ModuleList([MessageFunction('ggnn', args={'e_label': d, 'in': in_n, 'out': in_n})
+                                for _ in range(n_layers)])
+
+        # Define Update 1 & 2
+        self.u = nn.ModuleList([UpdateFunction('ggnn',
+                                               args={'in': self.m[i].get_out_size(in_n[0], in_n[1]),
+                                                     'out': out[0]}) if i == 0 else
+                                UpdateFunction('ggnn',
+                                               args={'in': self.m[i].get_out_size(out[i - 1], in_n[1]),
+                                                     'out': out[i]}) for i in range(n_layers)])
+
+        # Define Readout
+        self.r = ReadoutFunction('ggnn',
                                  args={'layers': len(self.m) + 1,
                                        'in': [in_n[0] if i == 0 else out[i-1] for i in range(n_layers+1)],
                                        'out': out[n_layers-1],
@@ -64,87 +143,7 @@ class NMP_Duvenaud(nn.Module):
 
                 m = torch.sum(m, 1)
 
-                # Duvenaud
-                deg = torch.sum(g[:, v, :].data, 1)
-
-                for i in range(len(u_args['deg'])):
-                    ind = deg == u_args['deg'][i]
-                    ind = Variable(torch.squeeze(torch.nonzero(torch.squeeze(ind))))
-
-                    opt = {'deg': i}
-
-                    # Separate degrees
-                    # Update
-                    if len(ind) != 0:
-                        aux = self.u[t].forward(torch.index_select(h[t].clone(), 0, ind)[:, v, :], torch.index_select(m.clone(), 0, ind), opt)
-
-                        torch.index_select(h_t, 0, ind)[:, v, :] = torch.squeeze(aux)
-                        ind = ind.data.cpu().numpy()
-                        for j in range(len(ind)):
-                           h_t[ind[j], v, :] = aux[j, :]
-
-            h.append(h_t.clone())
-        # Readout
-        res = self.r.forward(h)
-        if self.type == 'classification':
-            res = nn.Softmax()(res)
-        return res
-
-
-class NMP_GGNN(nn.Module):
-    """
-    in_n (size_v, size_e)
-    """
-
-    def __init__(self, d, in_n, out, l_target, type='regression'):
-        super(NMP_GGNN, self).__init__()
-
-        n_layers = len(out)
-
-        # Define message 1 & 2
-        self.m = nn.ModuleList([MessageFunction('ggnn', args={'e_labels': d, 'in': in_n, 'out': in_n})
-                                for _ in range(n_layers)])
-
-        # Define Update 1 & 2
-        self.u = nn.ModuleList([UpdateFunction('ggnn',
-                                               args={'e_labels': d, 'in': self.m[i].get_out_size(in_n[0], in_n[1]),
-                                                     'out': out[0]}) if i == 0 else
-                                UpdateFunction('ggnn',
-                                               args={'e_labels': d, 'in': self.m[i].get_out_size(out[i - 1], in_n[1]),
-                                                     'out': out[i]}) for i in range(n_layers)])
-
-        # Define Readout
-        self.r = ReadoutFunction('ggnn',
-                                 args={'layers': len(self.m) + 1,
-                                       'in': [in_n[0] if i == 0 else out[i - 1] for i in range(n_layers)],
-                                       'out': out[n_layers - 1],
-                                       'target': l_target})
-
-        self.type = type
-
-    def forward(self, g, h_in, e):
-
-        h = []
-        h.append(h_in)
-
-        # Layer
-        for t in range(0, len(self.m)):
-
-            u_args = self.u[t].get_args()
-
-            h_t = Variable(torch.Tensor(np.zeros((h_in.size(0), h_in.size(1), u_args['out']))).type(h[t].data.type()))
-
-            # Apply one layer pass (Message + Update)
-            for v in range(0, h_in.size(1)):
-
-                m = self.m[t].forward(h[t][:, v], h[t], e[:, v, :])
-
-                # Nodes without edge set message to 0
-                m = g[:, v, :, None].expand_as(m) * m
-
-                m = torch.sum(m, 1)
-
-                # Duvenaud
+                # GGNN
                 deg = torch.sum(g[:, v, :].data, 1)
 
                 for i in range(len(u_args['deg'])):
