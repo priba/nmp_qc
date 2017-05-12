@@ -130,41 +130,30 @@ class NMP_GGNN(nn.Module):
         # Layer
         for t in range(0, len(self.m)):
 
-            u_args = self.u[t].get_args()
-
-            h_t = Variable(torch.Tensor(np.zeros((h_in.size(0), h_in.size(1), u_args['out']))).type(h[t].data.type()))
+            m_args = self.u[t].get_args()
 
             # Apply one layer pass (Message + Update)
             for v in range(0, h_in.size(1)):
+                # Separate edge labels
+                for i in range(len(m_args['label'])):
+                    ind = labels == m_args['label'][i]
+                    ind = Variable(torch.squeeze(torch.nonzero(torch.squeeze(ind))))
+                    if len(ind) != 0:
+                        opt = {'label': i}
 
-                m = self.m[t].forward(h[t][:, v], h[t], e[:, v, :])
+                        m = self.m[t].forward(h[t][:, v], h[t], e[:, v, :])
 
                 # Nodes without edge set message to 0
                 m = g[:, v, :, None].expand_as(m) * m
 
                 m = torch.sum(m, 1)
 
-                # Duvenaud
-                deg = torch.sum(g[:, v, :].data, 1)
+                # Update
+                h_t = self.u[t].forward(h[t], m, opt)
 
-                for i in range(len(u_args['deg'])):
-                    ind = deg == u_args['deg'][i]
-                    ind = Variable(torch.squeeze(torch.nonzero(torch.squeeze(ind))))
-
-                    opt = {'deg': i}
-
-                    # Separate degrees
-                    # Update
-                    if len(ind) != 0:
-                        aux = self.u[t].forward(torch.index_select(h[t].clone(), 0, ind)[:, v, :],
-                                                torch.index_select(m.clone(), 0, ind), opt)
-
-                        torch.index_select(h_t, 0, ind)[:, v, :] = torch.squeeze(aux)
-                        ind = ind.data.cpu().numpy()
-                        for j in range(len(ind)):
-                            h_t[ind[j], v, :] = aux[j, :]
 
             h.append(h_t.clone())
+
         # Readout
         res = self.r.forward(h)
         if self.type == 'classification':
