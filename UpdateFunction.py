@@ -23,6 +23,7 @@ import torch
 
 import torch.nn as nn
 import torch.nn.functional as F
+from torch.autograd.variable import Variable
 
 #dtype = torch.cuda.FloatTensor
 dtype = torch.FloatTensor
@@ -68,7 +69,7 @@ class UpdateFunction(nn.Module):
     def get_definition(self):
         return self.u_definition
 
-    # Get the name of the used update function
+    # Get the update function arguments
     def get_args(self):
         return self.args
 
@@ -99,7 +100,10 @@ class UpdateFunction(nn.Module):
 
         # GG-NN, Li et al.
     def u_ggnn(self, h_v, m_v, opt={}):
-        return self.learn_modules[0](m_v, F.pad(h_v, pad=(0, 0, self.args['out'])))[0]
+        h_v_padded = torch.cat(
+            [h_v, Variable(torch.Tensor(h_v.size(0), self.args['out'] - h_v.size(1)).type_as(h_v.data).zero_())],1)
+        h_new = self.learn_modules[0](torch.transpose(m_v, 0, 1), torch.unsqueeze(h_v_padded, 0))[0] # 0 or 1???
+        return torch.transpose(h_new,0,1)
 
     def init_ggnn(self, params):
         learn_args = []
@@ -110,7 +114,7 @@ class UpdateFunction(nn.Module):
         args['out'] = params['out']
 
         # GRU
-        learn_modules.append(nn.GRU(params['in_m'], params['out'], batch_first=True))
+        learn_modules.append(nn.GRU(params['in_m'], params['out']))
 
         return nn.ParameterList(learn_args), nn.ModuleList(learn_modules), args
 

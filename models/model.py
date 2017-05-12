@@ -52,7 +52,7 @@ class NMP_Duvenaud(nn.Module):
 
             u_args = self.u[t].get_args()
 
-            h_t = Variable(torch.Tensor(np.zeros((h_in.size(0), h_in.size(1), u_args['out']))).type(h[t].data.type()))
+            h_t = Variable(torch.Tensor(np.zeros((h_in.size(0), h_in.size(1), u_args['out']))).type_as(h[t].data))
 
             # Apply one layer pass (Message + Update)
             for v in range(0, h_in.size(1)):
@@ -131,18 +131,13 @@ class NMP_GGNN(nn.Module):
         # Layer
         for t in range(0, len(self.m)):
 
-            m_args = self.u[t].get_args()
+            u_args = self.u[t].get_args()
+            h_t = Variable(torch.Tensor(np.zeros((h_in.size(0), h_in.size(1), u_args['out']))).type_as(h_in.data))
 
             # Apply one layer pass (Message + Update)
             for v in range(0, h_in.size(1)):
-                # Separate edge labels
-                for i in range(len(m_args['label'])):
-                    ind = [0] == m_args['label'][i]
-                    ind = Variable(torch.squeeze(torch.nonzero(torch.squeeze(ind))))
-                    if len(ind) != 0:
-                        opt = {'label': i}
 
-                        m = self.m[t].forward(h[t][:, v], h[t], e[:, v, :])
+                m = self.m[t].forward(h[t][:, v, :], h[t], e[:, v, :])
 
                 # Nodes without edge set message to 0
                 m = g[:, v, :, None].expand_as(m) * m
@@ -150,7 +145,7 @@ class NMP_GGNN(nn.Module):
                 m = torch.sum(m, 1)
 
                 # Update
-                h_t = self.u[t].forward(h[t], m, opt)
+                h_t[:,v,:] = self.u[t].forward(h[t][:,v,:], m)
 
             h.append(h_t.clone())
 
@@ -210,9 +205,7 @@ class Nmp1(nn.Module):
 
                 for i in range(len(u_args['deg'])):
                     ind = deg == u_args['deg'][i]
-                    # ind = torch.squeeze(torch.nonzero(torch.squeeze(ind_binary)))
                     ind = Variable(torch.squeeze(torch.nonzero(torch.squeeze(ind))))
-                    # ind = torch.squeeze(torch.nonzero(torch.squeeze(ind)))
 
                     opt = {'deg': i}
 

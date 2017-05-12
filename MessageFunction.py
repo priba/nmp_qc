@@ -20,6 +20,8 @@ import time
 import torch
 
 import torch.nn as nn
+from torch.autograd.variable import Variable
+
 
 __author__ = "Pau Riba, Anjan Dutta"
 __email__ = "priba@cvc.uab.cat, adutta@cvc.uab.cat" 
@@ -73,6 +75,10 @@ class MessageFunction(nn.Module):
     def get_definition(self):
         return self.m_definition
 
+    # Get the message function arguments
+    def get_args(self):
+        return self.args
+
     # Get Output size
     def get_out_size(self, size_h, size_e, args=None):
         return self.m_size(size_h, size_e, args)
@@ -94,14 +100,19 @@ class MessageFunction(nn.Module):
         return learn_args, learn_modules, args
 
     # Li et al. (2016), Gated Graph Neural Networks (GG-NN)
-    def m_ggnn(self,  h_w, e_vw, opt):
+    def m_ggnn(self, h_v, h_w, e_vw, opt={}):
+        parameter_mat = nn.Parameter(torch.Tensor(np.zeros((h_w.size(0), h_w.size(1), self.args['in'], self.args['out']))).type_as(self.learn_args[0].data))
+        for i, el in enumerate(self.args['e_label']):
+            ind = (el == e_vw).type_as(parameter_mat)
+            parameter_mat = parameter_mat + ind[...,None].expand_as(parameter_mat) * self.learn_args[0][i].expand_as(parameter_mat)
 
-        param_sz = self.learn_args[0][opt['deg']].size()
-        parameter_mat = torch.t(self.learn_args[0][opt['deg']])[None, ...].expand(m_v.size(0), param_sz[1], param_sz[0])
+        h_new = Variable( torch.Tensor(h_w.size(0), h_w.size(1), self.args['out']).type_as(h_w.data) )
 
-        aux = torch.bmm(parameter_mat, torch.transpose(h_w, 1, 2))
+        for w in range(h_w.size(1)):
+            h_new[:,w,:] = torch.transpose(torch.bmm(torch.transpose(parameter_mat[:, w, :, :], 1, 2),
+                                                     torch.transpose(torch.unsqueeze(h_w[:, w, :], 1), 1, 2)), 1, 2).clone()
 
-        return torch.transpose(torch.nn.Sigmoid()(aux), 1, 2)
+        return h_new
 
     def out_ggnn(self, size_h, size_e, args):
         return self.args['out']
@@ -116,7 +127,7 @@ class MessageFunction(nn.Module):
         args['out'] = params['out']
 
         # Define a parameter matrix A for each degree.
-        learn_args.append(torch.nn.Parameter(torch.randn(len(params['e_label']), params['in'], params['out'])))
+        learn_args.append(nn.Parameter(torch.randn(len(params['e_label']), params['in'], params['out'])))
 
         return nn.ParameterList(learn_args), nn.ModuleList(learn_modules), args
 
