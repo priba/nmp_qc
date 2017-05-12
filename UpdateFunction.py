@@ -106,10 +106,11 @@ class UpdateFunction(nn.Module):
         learn_modules = []
         args = {}
 
+        args['in_m'] = params['in_m']
         args['out'] = params['out']
 
         # GRU
-        learn_modules.append(nn.GRU(params['in'], params['hidden_sz'], batch_first=True))
+        learn_modules.append(nn.GRU(params['in_m'], params['out'], batch_first=True))
 
         return nn.ParameterList(learn_args), nn.ModuleList(learn_modules), args
 

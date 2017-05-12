@@ -119,9 +119,10 @@ class ReadoutFunction(nn.Module):
         args = {}
 
         # i
-        learn_modules.append(nn.Linear(params['out'], params['target']))
+        learn_modules.append(NNet(n_in=sum(params['in']), n_out=params['target']))
+
         # j
-        learn_modules.append(nn.Linear(params['out'], params['target']))
+        learn_modules.append(NNet(n_in=params['in'][1], n_out=params['target']))
 
         return nn.ParameterList(learn_args), nn.ModuleList(learn_modules), args
 
