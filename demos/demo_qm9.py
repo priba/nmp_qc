@@ -59,7 +59,7 @@ parser.add_argument('--schedule', type=list, default=[0.1, 0.9], metavar='S',
 parser.add_argument('--momentum', type=float, default=0.9, metavar='M',
                     help='SGD momentum (default: 0.9)')
 # i/o
-parser.add_argument('--log-interval', type=int, default=200, metavar='N',
+parser.add_argument('--log-interval', type=int, default=7, metavar='N',
                     help='How many batches to wait before logging training status')
 # Accelerating
 parser.add_argument('--prefetch', type=int, default=2, help='Pre-fetching threads.')
@@ -163,6 +163,8 @@ def main():
         # evaluate on validation set
         validate(valid_loader, model, criterion, evaluation, logger)
 
+        # Logger step
+        logger.log_value('learning_rate', args.lr).step()
 
 def train(train_loader, model, criterion, optimizer, epoch, evaluation, logger):
     batch_time = AverageMeter()
@@ -257,8 +259,7 @@ def validate(val_loader, model, criterion, evaluation, logger):
           
     logger.log_value('test_epoch_loss', losses.avg)
     logger.log_value('test_epoch_error_ratio', error_ratio.avg)
-    logger.log_value('test_epoch_time', batch_time.avg).step()
-          
+
     
 if __name__ == '__main__':
     main()

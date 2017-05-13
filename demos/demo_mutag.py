@@ -150,6 +150,8 @@ def main():
         # evaluate on validation set
         validate(test_loader, model, criterion, evaluation, logger)
 
+        # Logger step
+        logger.log_value('learning_rate', args.lr).step()
 
 def train(train_loader, model, criterion, optimizer, epoch, evaluation, logger):
     batch_time = AverageMeter()
@@ -244,7 +246,6 @@ def validate(val_loader, model, criterion, evaluation, logger):
 
     logger.log_value('test_epoch_loss', losses.avg)
     logger.log_value('test_epoch_accuracy', accuracies.avg)
-    logger.log_value('test_epoch_time', batch_time.avg).step()
-    
+
 if __name__ == '__main__':
     main()

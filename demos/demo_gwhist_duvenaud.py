@@ -152,7 +152,9 @@ def main():
 
         # evaluate on test set
         validate(test_loader, model, criterion, evaluation, logger)
-        logger.step()
+
+        # Logger step
+        logger.log_value('learning_rate', args.lr).step()
 
 def train(train_loader, model, criterion, optimizer, epoch, evaluation, logger):
     batch_time = AverageMeter()
