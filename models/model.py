@@ -159,24 +159,24 @@ class NMP_interactionNet(nn.Module):
     """
     in_n (size_v, size_e)
     """
-    def __init__(self, d, in_n, out_update, hidden_state_readout, l_target, type='regression'):
+    def __init__(self, d, in_n, out_message, out_update, l_target, type='regression'):
         super(NMP_interactionNet, self).__init__()
 
         n_layers = len(out_update)
 
         # Define message 1 & 2
-        self.m = nn.ModuleList([MessageFunction('interaction') for _ in range(n_layers)])
+        self.m = nn.ModuleList([MessageFunction('interactionnet', args={'in': in_n[0], 'out': out_message[i]})
+                                if i == 0 else
+                                MessageFunction('interactionnet', args={'in': out_update[i-1], 'out': out_message[i]})
+                                for i in range(n_layers)])
 
         # Define Update 1 & 2
-        self.u = nn.ModuleList([UpdateFunction('interaction', args={'deg': d, 'in': self.m[i].get_out_size(in_n[0], in_n[1]), 'out': out_update[0]}) if i == 0 else
-                                UpdateFunction('interaction', args={'deg': d, 'in': self.m[i].get_out_size(out_update[i-1], in_n[1]), 'out': out_update[i]}) for i in range(n_layers)])
+        self.u = nn.ModuleList([UpdateFunction('interactionnet', args={'in': out_message[i], 'out': out_update[i]})
+                                for i in range(n_layers)])
 
         # Define Readout
-        self.r = ReadoutFunction('interaction',
-                                 args={'layers': len(self.m) + 1,
-                                       'in': [in_n[0] if i == 0 else out_update[i-1] for i in range(n_layers+1)],
-                                       'out': hidden_state_readout,
-                                       'target': l_target})
+        self.r = ReadoutFunction('interactionnet',
+                                 args={'in': out_update[-1], 'out': l_target})
 
         self.type = type
 
@@ -221,6 +221,7 @@ class NMP_interactionNet(nn.Module):
                            h_t[ind[j], v, :] = aux[j, :]
 
             h.append(h_t.clone())
+
         # Readout
         res = self.r.forward(h)
         if self.type == 'classification':
