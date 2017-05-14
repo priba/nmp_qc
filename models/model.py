@@ -155,28 +155,30 @@ class NMP_GGNN(nn.Module):
             res = nn.Softmax()(res)
         return res
 
-class Nmp1(nn.Module):
-    def __init__(self, d, in_n, out, l_target):
-        super(Nmp1, self).__init__()
+class NMP_interactionNet(nn.Module):
+    """
+    in_n (size_v, size_e)
+    """
+    def __init__(self, d, in_n, out_update, hidden_state_readout, l_target, type='regression'):
+        super(NMP_interactionNet, self).__init__()
+
+        n_layers = len(out_update)
 
         # Define message 1 & 2
-        self.m = nn.ModuleList([
-                MessageFunction('duvenaud'),
-                MessageFunction('duvenaud'),
-                MessageFunction('duvenaud')
-            ])
+        self.m = nn.ModuleList([MessageFunction('interaction') for _ in range(n_layers)])
 
         # Define Update 1 & 2
-        self.u = nn.ModuleList([
-                UpdateFunction('duvenaud', args={'deg': d, 'in': self.m[0].get_out_size(in_n[0], in_n[1]), 'out': out[0]}),
-                UpdateFunction('duvenaud', args={'deg': d, 'in': self.m[1].get_out_size(out[0], in_n[1]), 'out': out[1]}),
-                UpdateFunction('duvenaud', args={'deg': d, 'in': self.m[2].get_out_size(out[1], in_n[1]), 'out': out[2]})
-            ])
+        self.u = nn.ModuleList([UpdateFunction('interaction', args={'deg': d, 'in': self.m[i].get_out_size(in_n[0], in_n[1]), 'out': out_update[0]}) if i == 0 else
+                                UpdateFunction('interaction', args={'deg': d, 'in': self.m[i].get_out_size(out_update[i-1], in_n[1]), 'out': out_update[i]}) for i in range(n_layers)])
 
         # Define Readout
-        self.r = ReadoutFunction('duvenaud',
-                                 args={'layers': len(self.m) + 1, 'in': [in_n[0], out[0], out[1], out[2]], 'out': out[3],
+        self.r = ReadoutFunction('interaction',
+                                 args={'layers': len(self.m) + 1,
+                                       'in': [in_n[0] if i == 0 else out_update[i-1] for i in range(n_layers+1)],
+                                       'out': hidden_state_readout,
                                        'target': l_target})
+
+        self.type = type
 
     def forward(self, g, h_in, e):
 
@@ -188,12 +190,12 @@ class Nmp1(nn.Module):
 
             u_args = self.u[t].get_args()
 
-            h_t = Variable(torch.Tensor(np.zeros((h_in.size(0), h_in.size(1), u_args['out']))).type(h[t].data.type()))
+            h_t = Variable(torch.Tensor(np.zeros((h_in.size(0), h_in.size(1), u_args['out']))).type_as(h[t].data))
 
             # Apply one layer pass (Message + Update)
             for v in range(0, h_in.size(1)):
 
-                m = self.m[t].forward(h[t][:, v], h[t], e[:,v,:])
+                m = self.m[t].forward(h[t][:, v, :], h[t], e[:, v, :])
 
                 # Nodes without edge set message to 0
                 m = g[:, v, :, None].expand_as(m) * m
@@ -213,14 +215,14 @@ class Nmp1(nn.Module):
                     # Update
                     if len(ind) != 0:
                         aux = self.u[t].forward(torch.index_select(h[t].clone(), 0, ind)[:, v, :], torch.index_select(m.clone(), 0, ind), opt)
-                        # aux = self.u[t].forward(h[t][:, v, :].clone(), m.clone(), opt)
-                        # aux = torch.mul(ind_binary[..., None].expand_as(aux).float(), aux.data)
-                        torch.index_select(h_t, 0, ind)[:, v, :] = torch.squeeze(aux)
+
                         ind = ind.data.cpu().numpy()
                         for j in range(len(ind)):
                            h_t[ind[j], v, :] = aux[j, :]
 
             h.append(h_t.clone())
-
         # Readout
-        return nn.Softmax()(self.r.forward(h))
+        res = self.r.forward(h)
+        if self.type == 'classification':
+            res = nn.Softmax()(res)
+        return res

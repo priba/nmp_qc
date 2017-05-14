@@ -12,6 +12,7 @@ from __future__ import print_function
 
 # Own modules
 import datasets
+from models.nnet import NNet
 
 import numpy as np
 import os
@@ -46,13 +47,13 @@ class MessageFunction(nn.Module):
         self.m_definition = message_def.lower()
 
         self.m_function = {
-                    'duvenaud':     self.m_duvenaud,
-                    'ggnn':         self.m_ggnn,
-                    'intnet':       self.m_intnet,
-                    'mgc':          self.m_mgc,
-                    'bruna':        self.m_bruna,
-                    'defferrard':   self.m_deff,
-                    'kipf':         self.m_kipf
+                    'duvenaud':         self.m_duvenaud,
+                    'ggnn':             self.m_ggnn,
+                    'interactionnet':   self.m_intnet,
+                    'mgc':              self.m_mgc,
+                    'bruna':            self.m_bruna,
+                    'defferrard':       self.m_deff,
+                    'kipf':             self.m_kipf
                 }.get(self.m_definition, None)
 
         if self.m_function is None:
@@ -61,7 +62,8 @@ class MessageFunction(nn.Module):
 
         init_parameters = {
             'duvenaud': self.init_duvenaud,
-            'ggnn': self.init_ggnn
+            'ggnn':     self.init_ggnn,
+            'interactionnet': self.init_intnet
         }.get(self.m_definition, lambda x: (nn.ParameterList([]), nn.ModuleList([]), {}))
 
         self.learn_args, self.learn_modules, self.args = init_parameters(args)
@@ -99,6 +101,7 @@ class MessageFunction(nn.Module):
         args = {}
         return learn_args, learn_modules, args
 
+
     # Li et al. (2016), Gated Graph Neural Networks (GG-NN)
     def m_ggnn(self, h_v, h_w, e_vw, opt={}):
         parameter_mat = nn.Parameter(torch.Tensor(np.zeros((h_w.size(0), h_w.size(1), self.args['in'], self.args['out']))).type_as(self.learn_args[0].data))
@@ -111,7 +114,6 @@ class MessageFunction(nn.Module):
         for w in range(h_w.size(1)):
             h_new[:,w,:] = torch.transpose(torch.bmm(torch.transpose(parameter_mat[:, w, :, :],1,2),
                                                      torch.transpose(torch.unsqueeze(h_w[:, w, :], 1), 1, 2)), 1, 2).clone()
-
         return h_new
 
     def out_ggnn(self, size_h, size_e, args):
@@ -133,9 +135,23 @@ class MessageFunction(nn.Module):
 
     # Battaglia et al. (2016), Interaction Networks
     def m_intnet(self, h_v, h_w, e_vw, args):
-        m = torch.cat([h_v, h_w, e_vw], 0)
-        # TODO NN taking m
+        m = torch.cat([h_w, e_vw], 2)
+        m = self.learn_modules[0](m)
         return m
+
+    def out_intnet(self, size_h, size_e, args):
+        return self.args['out']
+
+    def init_intnet(self, params):
+        learn_args = []
+        learn_modules = []
+        args = {}
+
+        args['out'] = params['out']
+
+        learn_modules.append(NNet(n_in=params['in'], n_out=params['out']))
+
+        return learn_args, learn_modules, args
 
     # Kearnes et al. (2016), Molecular Graph Convolutions
     def m_mgc(self, h_v, h_w, e_vw, args):
