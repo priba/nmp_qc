@@ -12,8 +12,8 @@ from __future__ import print_function
 
 # Own modules
 import datasets
-from datasets import utils
 from MessageFunction import MessageFunction
+from models.nnet import NNet
 
 import numpy as np
 import time
@@ -51,16 +51,18 @@ class UpdateFunction(nn.Module):
         self.u_definition = update_def.lower()
 
         self.u_function = {
-                    'duvenaud':   self.u_duvenaud,
-                    'ggnn':       self.u_ggnn
+                    'duvenaud':         self.u_duvenaud,
+                    'ggnn':             self.u_ggnn,
+                    'interactionNet':   self.u_intnet
                 }.get(self.u_definition, None)
 
         if self.u_function is None:
             print('WARNING!: Update Function has not been set correctly\n\tIncorrect definition ' + update_def)
 
         init_parameters = {
-            'duvenaud':     self.init_duvenaud,
-            'ggnn':         self.init_ggnn
+            'duvenaud':         self.init_duvenaud,
+            'ggnn':             self.init_ggnn,
+            'interactionnet':   self.init_intnet
         }.get(self.u_definition, lambda x: (nn.ParameterList([]), nn.ModuleList([]), {}))
 
         self.learn_args, self.learn_modules, self.args = init_parameters(args)
@@ -98,7 +100,8 @@ class UpdateFunction(nn.Module):
 
         return nn.ParameterList(learn_args), nn.ModuleList(learn_modules), args
 
-        # GG-NN, Li et al.
+
+    # GG-NN, Li et al.
     def u_ggnn(self, h_v, m_v, opt={}):
         h_v.contiguous()
         m_v.contiguous()
@@ -115,6 +118,25 @@ class UpdateFunction(nn.Module):
 
         # GRU
         learn_modules.append(nn.GRU(params['in_m'], params['out']))
+
+        return nn.ParameterList(learn_args), nn.ModuleList(learn_modules), args
+
+
+    # Battaglia et al. (2016), Interaction Networks
+    def u_intnet(self, h_v, m_v, opt):
+        input_tensor = torch.cat([h_v, opt['x_v'], m_v], 2)
+
+        return self.learn_modules[0](input_tensor)
+
+    def init_intnet(self, params):
+        learn_args = []
+        learn_modules = []
+        args = {}
+
+        args['in'] = params['in']
+        args['out'] = params['out']
+
+        learn_modules.append(NNet(n_in=params['in'], n_out=params['out']))
 
         return nn.ParameterList(learn_args), nn.ModuleList(learn_modules), args
 

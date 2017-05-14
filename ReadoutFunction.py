@@ -137,6 +137,23 @@ class ReadoutFunction(nn.Module):
         return nn.ParameterList(learn_args), nn.ModuleList(learn_modules), args
 
 
+    # Battaglia et al. (2016), Interaction Networks
+    def r_intnet(self, h):
+
+        aux = torch.sum(h[-1],1)
+
+        return self.learn_modules[0](aux)
+
+    def init_intnet(self, params):
+        learn_args = []
+        learn_modules = []
+        args = {}
+
+        learn_modules.append(NNet(n_in=params['in'], n_out=params['target']))
+
+        return nn.ParameterList(learn_args), nn.ModuleList(learn_modules), args
+
+
 if __name__ == '__main__':
     # Parse optios for downloading
     parser = argparse.ArgumentParser(description='QM9 Object.')
