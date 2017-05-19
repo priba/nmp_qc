@@ -312,6 +312,14 @@ def create_graph_gwhist(file):
     return g
 
 
+def isfloat(value):
+    try:
+        float(value)
+        return True
+    except ValueError:
+        return False
+
+
 def create_graph_grec(file):
 
     tree_gxl = ET.parse(file)
@@ -338,7 +346,11 @@ def create_graph_grec(file):
             elif(attr.get('name') == 'type0'):
                 ta = switch_edge.get(attr.find('String').text)
             elif (attr.get('name') == 'angle0'):
-                a = float(attr.find('String').text)
+                a = attr.find('String').text
+                if isfloat(a):
+                    a = float(a)
+                else:
+                    a = 0.0     # TODO: The erroneous string is replaced with 0.0
         g.add_edge(s, t, frequency=f, type=ta, angle=a)
 
     for i in range(len(vl)):
@@ -366,7 +378,10 @@ def create_graph_letter(file):
         s = int(edge.get('from').split('_')[1])
         t = int(edge.get('to').split('_')[1])
         g.add_edge(s, t)
-    for i in range(g.number_of_nodes()):
+
+    for i in range(len(vl)):
+        if i not in g.node:
+            g.add_node(i)
         g.node[i]['labels'] = np.array(vl[i][:2])
 
     return g

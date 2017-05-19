@@ -76,7 +76,15 @@ if __name__ == '__main__':
     print(len(data_valid))
     print(len(data_test))
 
-    for i in range(1000):
+    for i in range(len(train_ids)):
         print(data_train[i])
+
+    for i in range(len(valid_ids)):
+        print(data_valid[i])
+
+    for i in range(len(test_ids)):
+        print(data_test[i])
+
+    print(data_train[61])
     print(data_valid[1])
     print(data_test[1])
