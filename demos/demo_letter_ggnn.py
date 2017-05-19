@@ -9,12 +9,6 @@
     arXiv preprint arXiv:1704.01212 [cs.LG]
 """
 
-# Own Modules
-import datasets
-from datasets import utils
-from models.model import NMP_Duvenaud
-from LogMetric import AverageMeter, Logger
-
 # Torch
 import torch
 import torch.optim as optim
@@ -23,19 +17,24 @@ from torch.autograd import Variable
 
 import time
 import argparse
-import os, sys
-import numpy as np
+import os
+import sys
 
-reader_folder = os.path.realpath( os.path.abspath('../GraphReader'))
+# Our Modules
+reader_folder = os.path.realpath(os.path.abspath('..'))
 if reader_folder not in sys.path:
-    sys.path.insert(1, reader_folder)
-
-from GraphReader.graph_reader import read_2cols_set_files, create_numeric_classes
+    sys.path.append(reader_folder)
+import datasets
+from datasets import utils
+from models.model import NMP_GGNN
+from LogMetric import AverageMeter, Logger
+from GraphReader.graph_reader import read_cxl
 
 __author__ = "Pau Riba, Anjan Dutta"
 __email__ = "priba@cvc.uab.cat, adutta@cvc.uab.cat"
 
 torch.multiprocessing.set_sharing_strategy('file_system')
+
 
 # Parser check
 def restricted_float(x, inter):
@@ -47,10 +46,10 @@ def restricted_float(x, inter):
 # Argument parser
 parser = argparse.ArgumentParser(description='Neural message passing')
 
-parser.add_argument('--dataset', default='gwhistograph', help='GWHISTOGRAPH')
-parser.add_argument('--datasetPath', default='./data/GWHistoGraphs/', help='dataset path')
-parser.add_argument('--subSet', default='01_Keypoint', help='sub dataset')
-parser.add_argument('--logPath', default='./log/', help='log path')
+parser.add_argument('--dataset', default='Letter', help='letter')
+parser.add_argument('--datasetPath', default='../data/Letter/', help='dataset path')
+parser.add_argument('--subSet', default='LOW', help='sub dataset')
+parser.add_argument('--logPath', default='../log/', help='log path')
 # Optimization Options
 parser.add_argument('--batch-size', type=int, default=20, metavar='N',
                     help='Input batch size for training (default: 20)')
@@ -85,30 +84,32 @@ def main():
     subset = args.subSet
 
     print('Prepare files')
-    
-    train_classes, train_ids = read_2cols_set_files(os.path.join(root, 'Set/Train.txt'))
-    valid_classes, valid_ids = read_2cols_set_files(os.path.join(root, 'Set/Valid.txt'))
-    test_classes, test_ids = read_2cols_set_files(os.path.join(root,'Set/Test.txt'))
-    
-    train_classes, valid_classes, test_classes = create_numeric_classes(train_classes, valid_classes, test_classes)
 
+    train_classes, train_ids = read_cxl(os.path.join(root, subset, 'train.cxl'))
+    test_classes, test_ids = read_cxl(os.path.join(root, subset, 'test.cxl'))
+    valid_classes, valid_ids = read_cxl(os.path.join(root, subset, 'validation.cxl'))
+    
     train_classes = train_classes + valid_classes
     train_ids = train_ids + valid_ids
 
     del valid_classes, valid_ids
     
-    num_classes = max(train_classes + test_classes) + 1
-    data_train = datasets.GWHISTOGRAPH(root, subset, train_ids, train_classes, num_classes)
-    data_test = datasets.GWHISTOGRAPH(root, subset, test_ids, test_classes, num_classes)
+    num_classes = len(list(set(train_classes + test_classes)))
+    data_train = datasets.LETTER(root, subset, train_ids, train_classes, num_classes)
+    data_test = datasets.LETTER(root, subset, test_ids, test_classes, num_classes)
     
     # Define model and optimizer
     print('Define model')
     # Select one graph
     g_tuple, l = data_train[0]
     g, h_t, e = g_tuple
-    
+
+    #TODO: Need attention
     print('\tStatistics')
-    stat_dict = datasets.utils.get_graph_stats(data_train, ['degrees'])
+    stat_dict = {}
+    # stat_dict = datasets.utils.get_graph_stats(data_train, ['edge_labels'])
+    stat_dict['edge_labels'] = [1]
+
 
     # Data Loader
     train_loader = torch.utils.data.DataLoader(data_train,
@@ -119,7 +120,7 @@ def main():
                                               num_workers=args.prefetch, pin_memory=True)
 
     print('\tCreate model')
-    model = NMP_Duvenaud(stat_dict['degrees'], [len(h_t[0]), len(list(e.values())[0])], [5, 15, 15], 30, num_classes, type='classification')
+    model = NMP_GGNN(stat_dict['edge_labels'], [len(h_t[0]), len(list(e.values())[0])], 25, 15, 2, len(l), type='classification')
 
     print('Check cuda')
     if args.cuda:
@@ -152,7 +153,10 @@ def main():
 
         # evaluate on test set
         validate(test_loader, model, criterion, evaluation, logger)
-        logger.step()
+
+        # Logger step
+        logger.log_value('learning_rate', args.lr).step()
+
 
 def train(train_loader, model, criterion, optimizer, epoch, evaluation, logger):
     batch_time = AverageMeter()
@@ -185,7 +189,6 @@ def train(train_loader, model, criterion, optimizer, epoch, evaluation, logger):
             return train_loss
 
         optimizer.step(closure)
-
 
         output = model(g, h, e)
         train_loss = criterion(output, torch.squeeze(target.type(torch.cuda.LongTensor)))

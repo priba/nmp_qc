@@ -26,9 +26,9 @@ if reader_folder not in sys.path:
     sys.path.append(reader_folder)
 import datasets
 from datasets import utils
-from models.model import NMP_Duvenaud
+from models.model import NMP_GGNN
 from LogMetric import AverageMeter, Logger
-from GraphReader.graph_reader import read_2cols_set_files, create_numeric_classes
+from GraphReader.graph_reader import read_cxl
 
 __author__ = "Pau Riba, Anjan Dutta"
 __email__ = "priba@cvc.uab.cat, adutta@cvc.uab.cat"
@@ -46,9 +46,8 @@ def restricted_float(x, inter):
 # Argument parser
 parser = argparse.ArgumentParser(description='Neural message passing')
 
-parser.add_argument('--dataset', default='gwhistograph', help='GWHISTOGRAPH')
-parser.add_argument('--datasetPath', default='../data/GWHistoGraphs/', help='dataset path')
-parser.add_argument('--subSet', default='01_Keypoint', help='sub dataset')
+parser.add_argument('--dataset', default='GREC', help='GREC')
+parser.add_argument('--datasetPath', default='../data/GREC/', help='dataset path')
 parser.add_argument('--logPath', default='../log/', help='log path')
 # Optimization Options
 parser.add_argument('--batch-size', type=int, default=20, metavar='N',
@@ -81,33 +80,32 @@ def main():
 
     # Load data
     root = args.datasetPath
-    subset = args.subSet
 
     print('Prepare files')
-    
-    train_classes, train_ids = read_2cols_set_files(os.path.join(root, 'Set/Train.txt'))
-    valid_classes, valid_ids = read_2cols_set_files(os.path.join(root, 'Set/Valid.txt'))
-    test_classes, test_ids = read_2cols_set_files(os.path.join(root,'Set/Test.txt'))
-    
-    train_classes, valid_classes, test_classes = create_numeric_classes(train_classes, valid_classes, test_classes)
 
+    train_classes, train_ids = read_cxl(os.path.join(root, 'data/train.cxl'))
+    test_classes, test_ids = read_cxl(os.path.join(root, 'data/test.cxl'))
+    valid_classes, valid_ids = read_cxl(os.path.join(root, 'data/valid.cxl'))
+    
     train_classes = train_classes + valid_classes
     train_ids = train_ids + valid_ids
 
     del valid_classes, valid_ids
     
-    num_classes = max(train_classes + test_classes) + 1
-    data_train = datasets.GWHISTOGRAPH(root, subset, train_ids, train_classes, num_classes)
-    data_test = datasets.GWHISTOGRAPH(root, subset, test_ids, test_classes, num_classes)
+    num_classes = len(list(set(train_classes + test_classes)))
+    data_train = datasets.GREC(root, train_ids, train_classes, num_classes)
+    data_test = datasets.GREC(root, test_ids, test_classes, num_classes)
     
     # Define model and optimizer
     print('Define model')
     # Select one graph
     g_tuple, l = data_train[0]
     g, h_t, e = g_tuple
-    
+
+    #TODO: Need attention
     print('\tStatistics')
-    stat_dict = datasets.utils.get_graph_stats(data_train, ['degrees'])
+    stat_dict = {}
+    stat_dict = datasets.utils.get_graph_stats(data_train, ['edge_labels'])
 
     # Data Loader
     train_loader = torch.utils.data.DataLoader(data_train,
@@ -118,7 +116,7 @@ def main():
                                               num_workers=args.prefetch, pin_memory=True)
 
     print('\tCreate model')
-    model = NMP_Duvenaud(stat_dict['degrees'], [len(h_t[0]), len(list(e.values())[0])], [5, 15, 15], 30, num_classes, type='classification')
+    model = NMP_GGNN(stat_dict['edge_labels'], [len(h_t[0]), len(list(e.values())[0])], 25, 15, 2, len(l), type='classification')
 
     print('Check cuda')
     if args.cuda:
