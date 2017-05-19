@@ -187,6 +187,17 @@ def read_2cols_set_files(file):
     return classes, files
 
 
+def read_cxl(file):
+    files = []
+    classes = []
+    tree_cxl = ET.parse(file)
+    root_cxl = tree_cxl.getroot()
+    for f in root_cxl.iter('print'):
+        files += [f.get('file')]
+        classes += [f.get('class')]
+    return classes, files
+
+
 def divide_datasets(graphs, classes):
     
     uc = list(set(classes))
@@ -259,7 +270,7 @@ def create_graph_mutag(file):
     
     edge_list = lines[idx_edge+1:idx_clss]
     
-    g = nx.parse_edgelist(edge_list, nodetype = int, data = (('weight',float),), delimiter=",")
+    g = nx.parse_edgelist(edge_list, nodetype=int, data=(('weight', float),), delimiter=",")
     
     for i in range(1, g.number_of_nodes()+1):
         g.node[i]['labels'] = np.array(vl[i-1])
@@ -291,11 +302,69 @@ def create_graph_gwhist(file):
         s = int(s.split('_')[1])
         t = edge.get('to')
         t = int(t.split('_')[1])
-        g.add_edge(s,t)
+        g.add_edge(s, t)
         
     for i in range(g.number_of_nodes()):
         g.node[i]['labels'] = np.array(vl[i])
         
+    return g
+
+
+def create_graph_grec(file):
+
+    tree_gxl = ET.parse(file)
+    root_gxl = tree_gxl.getroot()
+    vl = []
+    switch_node = {'circle': 0, 'corner': 1, 'endpoint': 2, 'intersection': 3}
+    switch_edge = {'arc': 0, 'arcarc': 1, 'line': 2, 'linearc': 3}
+    for node in root_gxl.iter('node'):
+        for attr in node.iter('attr'):
+            if (attr.get('name') == 'x'):
+                x = int(attr.find('Integer').text)
+            elif (attr.get('name') == 'y'):
+                y = int(attr.find('Integer').text)
+            elif (attr.get('name') == 'type'):
+                t = switch_node.get(attr.find('String').text)
+        vl += [[x, y, t]]
+    g = nx.Graph()
+    for edge in root_gxl.iter('edge'):
+        s = int(edge.get('from'))
+        t = int(edge.get('to'))
+        for attr in edge.iter('attr'):
+            if(attr.get('name') == 'frequency'):
+                f = attr.find('Integer').text
+            elif(attr.get('name') == 'type0'):
+                ta = switch_edge.get(attr.find('String').text)
+            elif (attr.get('name') == 'angle0'):
+                a = float(attr.find('String').text)
+        g.add_edge(s, t, frequency=f, type=ta, angle=a)
+
+    for i in range(g.number_of_nodes()):
+        g.node[i]['labels'] = np.array(vl[i][:3])
+
+    return g
+
+
+def create_graph_letter(file):
+
+    tree_gxl = ET.parse(file)
+    root_gxl = tree_gxl.getroot()
+    vl = []
+    for node in root_gxl.iter('node'):
+        for attr in node.iter('attr'):
+            if (attr.get('name') == 'x'):
+                x = float(attr.find('float').text)
+            elif (attr.get('name') == 'y'):
+                y = float(attr.find('float').text)
+        vl += [[x, y]]
+    g = nx.Graph()
+    for edge in root_gxl.iter('edge'):
+        s = int(edge.get('from').split('_')[1])
+        t = int(edge.get('to').split('_')[1])
+        g.add_edge(s, t)
+    for i in range(g.number_of_nodes()):
+        g.node[i]['labels'] = np.array(vl[i][:2])
+
     return g
 
 
@@ -395,10 +464,14 @@ def xyz_graph_reader(graph_file):
     
 if __name__ == '__main__':
 
+    g1 = create_graph_grec('/home/adutta/Workspace/Datasets/Graphs/GREC/data/image1_1.gxl')
+
+    g2 = create_graph_letter('/home/adutta/Workspace/Datasets/STDGraphs/Letter/LOW/AP1_0000.gxl')
+
     # Parse optios for downloading
     parser = argparse.ArgumentParser(description='Read the specified directory, dataset and subdirectory.')
     # Positional arguments
-    parser.add_argument('dataset', nargs=1, help='Specify a dataset.')
+    parser.add_argument('--dataset', default='GREC', nargs=1, help='Specify a dataset.')
     # Optional argument
     parser.add_argument('--dir', nargs=1, help='Specify the data directory.', default=['../data/'])
     parser.add_argument('--subdir', nargs=1, help='Specify a subdirectory.')
@@ -421,5 +494,3 @@ if __name__ == '__main__':
     train_graphs, train_classes, valid_graphs, valid_classes, test_graphs, test_classes = load_dataset(directory,
                                                                                                        dataset, subdir)
     print(len(train_graphs), len(valid_graphs), len(test_graphs))
-    
-#    

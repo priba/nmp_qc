@@ -102,7 +102,7 @@ class NMP_GGNN(nn.Module):
         self.m = nn.ModuleList([MessageFunction('ggnn', args={'e_label': d, 'in': hidden_state_size, 'out': message_size})])
 
         # Define Update
-        self.u = nn.ModuleList([UpdateFunction(  'ggnn',
+        self.u = nn.ModuleList([UpdateFunction('ggnn',
                                                 args={'in_m': message_size,
                                                 'out': hidden_state_size})])
 
@@ -143,10 +143,10 @@ class NMP_GGNN(nn.Module):
                 m = torch.sum(m, 1)
 
                 # Update
-                h_t[:,v,:] = self.u[0].forward(h[t][:,v,:], m)
+                h_t[:, v, :] = self.u[0].forward(h[t][:, v, :], m)
 
             # Delete virtual nodes
-            h_t = (torch.sum(h_in,2).expand_as(h_t)>0).type_as(h_t)*h_t
+            h_t = (torch.sum(h_in, 2).expand_as(h_t) > 0).type_as(h_t)*h_t
             h.append(h_t.clone())
 
         # Readout
@@ -156,28 +156,27 @@ class NMP_GGNN(nn.Module):
         return res
 
 
-class NMP_interactionNet(nn.Module):
+class NMP_IntNet(nn.Module):
     """
     in_n (size_v, size_e)
     """
-    def __init__(self, d, in_n, out_message, out_update, l_target, type='regression'):
-        super(NMP_interactionNet, self).__init__()
+    def __init__(self, in_n, out_message, out_update, l_target, type='regression'):
+        super(NMP_IntNet, self).__init__()
 
         n_layers = len(out_update)
 
         # Define message 1 & 2
-        self.m = nn.ModuleList([MessageFunction('interactionnet', args={'in': in_n[0], 'out': out_message[i]})
+        self.m = nn.ModuleList([MessageFunction('intnet', args={'in': 2*in_n[0] + in_n[1], 'out': out_message[i]})
                                 if i == 0 else
-                                MessageFunction('interactionnet', args={'in': out_update[i-1], 'out': out_message[i]})
+                                MessageFunction('intnet', args={'in': out_update[i-1], 'out': out_message[i]})
                                 for i in range(n_layers)])
 
         # Define Update 1 & 2
-        self.u = nn.ModuleList([UpdateFunction('interactionnet', args={'in': out_message[i], 'out': out_update[i]})
+        self.u = nn.ModuleList([UpdateFunction('intnet', args={'in': out_message[i], 'out': out_update[i]})
                                 for i in range(n_layers)])
 
         # Define Readout
-        self.r = ReadoutFunction('interactionnet',
-                                 args={'in': out_update[-1], 'out': l_target})
+        self.r = ReadoutFunction('intnet', args={'in': out_update[-1], 'target': l_target})
 
         self.type = type
 
@@ -189,24 +188,26 @@ class NMP_interactionNet(nn.Module):
         # Layer
         for t in range(0, len(self.m)):
 
-            h_t = Variable(torch.Tensor(np.zeros((h_in.size(0), h_in.size(1), u_args['out']))).type_as(h[t].data))
             u_args = self.u[t].get_args()
+            h_t = Variable(torch.Tensor(np.zeros((h_in.size(0), h_in.size(1), u_args['out']))).type_as(h[t].data))
 
             # Apply one layer pass (Message + Update)
             for v in range(0, h_in.size(1)):
 
-                m = self.m[t].forward(h[t][:, v, :], h[t], e[:, v, :])
+                for w in range(h_in.size(1)):
 
-                # Nodes without edge set message to 0
-                m = g[:, v, :, None].expand_as(m) * m
+                    m = self.m[t].forward(h[t][:, v, :], h[t][:, w, :], e[:, v, w, :]).cuda()
 
-                m = torch.sum(m, 1)
+                    # Nodes without edge set message to 0
+                    m = g[:, v, :, None].expand_as(m) * m
 
-                # Interaction Net
-                opt = {}
-                opt['x_v'] = []
+                    m = torch.sum(m, 1)
 
-                h_t[:,v,:] = self.u[t].forward(h[t][:, v, :], m, opt)
+                    # Interaction Net
+                    opt = {}
+                    opt['x_v'] = []
+
+                    h_t[:, v, :] = self.u[t].forward(h[t][:, v, :], m, opt)
 
             h.append(h_t.clone())
 

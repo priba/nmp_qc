@@ -81,9 +81,9 @@ if __name__ == '__main__':
     root = args.root[0]
     subset = args.subset[0]
     
-    train_classes, train_ids = read_2cols_set_files(os.path.join(root,'Set/Train.txt'))
-    test_classes, test_ids = read_2cols_set_files(os.path.join(root,'Set/Test.txt'))
-    valid_classes, valid_ids = read_2cols_set_files(os.path.join(root,'Set/Valid.txt'))
+    train_classes, train_ids = read_2cols_set_files(os.path.join(root, 'Set/Train.txt'))
+    test_classes, test_ids = read_2cols_set_files(os.path.join(root, 'Set/Test.txt'))
+    valid_classes, valid_ids = read_2cols_set_files(os.path.join(root, 'Set/Valid.txt'))
     
     train_classes, valid_classes, test_classes = create_numeric_classes(train_classes, valid_classes, test_classes)
 
