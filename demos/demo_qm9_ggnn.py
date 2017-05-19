@@ -10,11 +10,6 @@
 
 """
 
-# Own Modules
-import datasets
-from models.model import NMP_GGNN
-from LogMetric import AverageMeter, Logger
-
 # Torch
 import torch
 import torch.optim as optim
@@ -24,7 +19,17 @@ from torch.autograd import Variable
 import time
 import argparse
 import os
+import sys
 import numpy as np
+
+# Our Modules
+reader_folder = os.path.realpath(os.path.abspath('..'))
+if reader_folder not in sys.path:
+    sys.path.append(reader_folder)
+import datasets
+from datasets import utils
+from models.model import NMP_GGNN
+from LogMetric import AverageMeter, Logger
 
 __author__ = "Pau Riba, Anjan Dutta"
 __email__ = "priba@cvc.uab.cat, adutta@cvc.uab.cat"
@@ -41,8 +46,8 @@ def restricted_float(x, inter):
 parser = argparse.ArgumentParser(description='Neural message passing')
 
 parser.add_argument('--dataset', default='qm9', help='QM9')
-parser.add_argument('--datasetPath', default='./data/qm9/dsgdb9nsd/', help='dataset path')
-parser.add_argument('--logPath', default='./log/', help='log path')
+parser.add_argument('--datasetPath', default='../data/qm9/dsgdb9nsd/', help='dataset path')
+parser.add_argument('--logPath', default='../log/', help='log path')
 # Optimization Options
 parser.add_argument('--batch-size', type=int, default=20, metavar='N',
                     help='Input batch size for training (default: 20)')
@@ -50,7 +55,7 @@ parser.add_argument('--no-cuda', action='store_true', default=False,
                     help='Enables CUDA training')
 parser.add_argument('--epochs', type=int, default=360, metavar='N',
                     help='Number of epochs to train (default: 360)')
-parser.add_argument('--lr', type=lambda x: restricted_float(x, [1e-5, 5e-4]), default=1e-4, metavar='LR',
+parser.add_argument('--lr', type=lambda x: restricted_float(x, [1e-5, 1e-2]), default=1e-4, metavar='LR',
                     help='Initial learning rate [1e-5, 5e-4] (default: 1e-4)')
 parser.add_argument('--lr-decay', type=lambda x: restricted_float(x, [.01, 1]), default=0.6, metavar='LR-DECAY',
                     help='Learning rate decay factor [.01, 1] (default: 0.6)')
@@ -59,7 +64,7 @@ parser.add_argument('--schedule', type=list, default=[0.1, 0.9], metavar='S',
 parser.add_argument('--momentum', type=float, default=0.9, metavar='M',
                     help='SGD momentum (default: 0.9)')
 # i/o
-parser.add_argument('--log-interval', type=int, default=10, metavar='N',
+parser.add_argument('--log-interval', type=int, default=7, metavar='N',
                     help='How many batches to wait before logging training status')
 # Accelerating
 parser.add_argument('--prefetch', type=int, default=2, help='Pre-fetching threads.')
@@ -119,19 +124,17 @@ def main():
     # Data Loader
     train_loader = torch.utils.data.DataLoader(data_train,
                                                batch_size=args.batch_size, shuffle=True, collate_fn=datasets.utils.collate_g,
-                                               num_workers=args.prefetch, pin_memory=True
-                                               )
+                                               num_workers=args.prefetch, pin_memory=True)
     valid_loader = torch.utils.data.DataLoader(data_valid,
                                                batch_size=args.batch_size, shuffle=False, collate_fn=datasets.utils.collate_g,
-                                               num_workers=args.prefetch, pin_memory=True
-                                               )
+                                               num_workers=args.prefetch, pin_memory=True)
     test_loader = torch.utils.data.DataLoader(data_test,
                                               batch_size=args.batch_size, shuffle=False, collate_fn=datasets.utils.collate_g,
-                                              num_workers=args.prefetch, pin_memory=True
-                                              )
+                                              num_workers=args.prefetch, pin_memory=True)
 
     print('\tCreate model')
-    model = NMP_GGNN(stat_dict['edge_labels'], [len(h_t[0]), len(list(e.values())[0])], 25, 15, 3, len(l))
+    model = NMP_GGNN(stat_dict['edge_labels'], [len(h_t[0]), len(list(e.values())[0])], 25, 15, 2, len(l),
+                     type='regression')
 
     print('Check cuda')
     if args.cuda:
@@ -259,6 +262,7 @@ def validate(val_loader, model, criterion, evaluation, logger):
           
     logger.log_value('test_epoch_loss', losses.avg)
     logger.log_value('test_epoch_error_ratio', error_ratio.avg)
+
     
 if __name__ == '__main__':
     main()

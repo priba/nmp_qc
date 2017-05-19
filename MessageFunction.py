@@ -49,7 +49,7 @@ class MessageFunction(nn.Module):
         self.m_function = {
                     'duvenaud':         self.m_duvenaud,
                     'ggnn':             self.m_ggnn,
-                    'interactionnet':   self.m_intnet,
+                    'intnet':           self.m_intnet,
                     'mgc':              self.m_mgc,
                     'bruna':            self.m_bruna,
                     'defferrard':       self.m_deff,
@@ -63,14 +63,15 @@ class MessageFunction(nn.Module):
         init_parameters = {
             'duvenaud': self.init_duvenaud,
             'ggnn':     self.init_ggnn,
-            'interactionnet': self.init_intnet
+            'intnet':   self.init_intnet
         }.get(self.m_definition, lambda x: (nn.ParameterList([]), nn.ModuleList([]), {}))
 
         self.learn_args, self.learn_modules, self.args = init_parameters(args)
 
         self.m_size = {
                 'duvenaud':     self.out_duvenaud,
-                'ggnn':         self.out_ggnn
+                'ggnn':         self.out_ggnn,
+                'intnet':       self.out_intnet
             }.get(self.m_definition, None)
 
     # Get the name of the used message function
@@ -101,19 +102,20 @@ class MessageFunction(nn.Module):
         args = {}
         return learn_args, learn_modules, args
 
-
     # Li et al. (2016), Gated Graph Neural Networks (GG-NN)
     def m_ggnn(self, h_v, h_w, e_vw, opt={}):
-        parameter_mat = nn.Parameter(torch.Tensor(np.zeros((h_w.size(0), h_w.size(1), self.args['in'], self.args['out']))).type_as(self.learn_args[0].data))
+        parameter_mat = nn.Parameter(torch.Tensor(np.zeros((h_w.size(0), h_w.size(1), self.args['in'],
+                                                            self.args['out']))).type_as(self.learn_args[0].data))
         for i, el in enumerate(self.args['e_label']):
             ind = (el == e_vw).type_as(parameter_mat)
-            parameter_mat = parameter_mat + ind[...,None].expand_as(parameter_mat) * self.learn_args[0][i].expand_as(parameter_mat)
+            parameter_mat = parameter_mat + ind[..., None].expand_as(parameter_mat) * \
+                                            self.learn_args[0][i].expand_as(parameter_mat)
 
-        h_new = Variable( torch.Tensor(h_w.size(0), h_w.size(1), self.args['out']).type_as(h_w.data) )
+        h_new = Variable(torch.Tensor(h_w.size(0), h_w.size(1), self.args['out']).type_as(h_w.data))
 
         for w in range(h_w.size(1)):
-            h_new[:,w,:] = torch.transpose(torch.bmm(torch.transpose(parameter_mat[:, w, :, :],1,2),
-                                                     torch.transpose(torch.unsqueeze(h_w[:, w, :], 1), 1, 2)), 1, 2).clone()
+            h_new[:, w, :] = torch.transpose(torch.bmm(torch.transpose(parameter_mat[:, w, :, :], 1, 2),
+                                                 torch.transpose(torch.unsqueeze(h_w[:, w, :], 1), 1, 2)), 1, 2).clone()
         return h_new
 
     def out_ggnn(self, size_h, size_e, args):
@@ -128,14 +130,14 @@ class MessageFunction(nn.Module):
         args['in'] = params['in']
         args['out'] = params['out']
 
-        # Define a parameter matrix A for each degree.
+        # Define a parameter matrix A for each edge label.
         learn_args.append(nn.Parameter(torch.randn(len(params['e_label']), params['in'], params['out'])))
 
         return nn.ParameterList(learn_args), nn.ModuleList(learn_modules), args
 
     # Battaglia et al. (2016), Interaction Networks
     def m_intnet(self, h_v, h_w, e_vw, args):
-        m = torch.cat([h_w, e_vw], 2)
+        m = torch.cat([h_v, h_w, e_vw], 1)
         m = self.learn_modules[0](m)
         return m
 
@@ -146,11 +148,9 @@ class MessageFunction(nn.Module):
         learn_args = []
         learn_modules = []
         args = {}
-
+        args['in'] = params['in']
         args['out'] = params['out']
-
         learn_modules.append(NNet(n_in=params['in'], n_out=params['out']))
-
         return learn_args, learn_modules, args
 
     # Kearnes et al. (2016), Molecular Graph Convolutions

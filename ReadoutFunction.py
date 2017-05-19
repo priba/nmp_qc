@@ -52,7 +52,8 @@ class ReadoutFunction(nn.Module):
 
         self.r_function = {
                     'duvenaud': self.r_duvenaud,
-                    'ggnn': self.r_ggnn
+                    'ggnn':     self.r_ggnn,
+                    'intnet':   self.r_intnet
                 }.get(self.r_definition, None)
 
         if self.r_function is None:
@@ -61,7 +62,8 @@ class ReadoutFunction(nn.Module):
 
         init_parameters = {
             'duvenaud': self.init_duvenaud,
-            'ggnn': self.init_ggnn
+            'ggnn':     self.init_ggnn,
+            'intnet':   self.init_intnet
         }.get(self.r_definition, lambda x: (nn.ParameterList([]), nn.ModuleList([]), {}))
 
         self.learn_args, self.learn_modules, self.args = init_parameters(args)
@@ -152,7 +154,6 @@ class ReadoutFunction(nn.Module):
         learn_modules.append(NNet(n_in=params['in'], n_out=params['target']))
 
         return nn.ParameterList(learn_args), nn.ModuleList(learn_modules), args
-
 
 if __name__ == '__main__':
     # Parse optios for downloading

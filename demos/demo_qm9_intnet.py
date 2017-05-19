@@ -10,11 +10,6 @@
 
 """
 
-# Own Modules
-import datasets
-from models.model import NMP_GGNN
-from LogMetric import AverageMeter, Logger
-
 # Torch
 import torch
 import torch.optim as optim
@@ -24,7 +19,17 @@ from torch.autograd import Variable
 import time
 import argparse
 import os
+import sys
 import numpy as np
+
+# Our Modules
+reader_folder = os.path.realpath(os.path.abspath('..'))
+if reader_folder not in sys.path:
+    sys.path.append(reader_folder)
+import datasets
+from datasets import utils
+from models.model import NMP_IntNet
+from LogMetric import AverageMeter, Logger
 
 __author__ = "Pau Riba, Anjan Dutta"
 __email__ = "priba@cvc.uab.cat, adutta@cvc.uab.cat"
@@ -119,19 +124,16 @@ def main():
     # Data Loader
     train_loader = torch.utils.data.DataLoader(data_train,
                                                batch_size=args.batch_size, shuffle=True, collate_fn=datasets.utils.collate_g,
-                                               num_workers=args.prefetch, pin_memory=True
-                                               )
+                                               num_workers=args.prefetch, pin_memory=True)
     valid_loader = torch.utils.data.DataLoader(data_valid,
                                                batch_size=args.batch_size, shuffle=False, collate_fn=datasets.utils.collate_g,
-                                               num_workers=args.prefetch, pin_memory=True
-                                               )
+                                               num_workers=args.prefetch, pin_memory=True)
     test_loader = torch.utils.data.DataLoader(data_test,
                                               batch_size=args.batch_size, shuffle=False, collate_fn=datasets.utils.collate_g,
-                                              num_workers=args.prefetch, pin_memory=True
-                                              )
+                                              num_workers=args.prefetch, pin_memory=True)
 
     print('\tCreate model')
-    model = NMP_GGNN(stat_dict['edge_labels'], len(h_t[0]), [25, 30, 35], len(l))
+    model = NMP_IntNet([len(h_t[0]), len(list(e.values())[0])], [5, 15, 15], [10, 20, 20], len(l), type='regression')
 
     print('Check cuda')
     if args.cuda:

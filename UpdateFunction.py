@@ -53,7 +53,7 @@ class UpdateFunction(nn.Module):
         self.u_function = {
                     'duvenaud':         self.u_duvenaud,
                     'ggnn':             self.u_ggnn,
-                    'interactionNet':   self.u_intnet
+                    'intnet':           self.u_intnet
                 }.get(self.u_definition, None)
 
         if self.u_function is None:
@@ -62,7 +62,7 @@ class UpdateFunction(nn.Module):
         init_parameters = {
             'duvenaud':         self.init_duvenaud,
             'ggnn':             self.init_ggnn,
-            'interactionnet':   self.init_intnet
+            'intnet':           self.init_intnet
         }.get(self.u_definition, lambda x: (nn.ParameterList([]), nn.ModuleList([]), {}))
 
         self.learn_args, self.learn_modules, self.args = init_parameters(args)
@@ -100,13 +100,12 @@ class UpdateFunction(nn.Module):
 
         return nn.ParameterList(learn_args), nn.ModuleList(learn_modules), args
 
-
     # GG-NN, Li et al.
     def u_ggnn(self, h_v, m_v, opt={}):
         h_v.contiguous()
         m_v.contiguous()
-        h_new = self.learn_modules[0](torch.transpose(m_v, 0, 1), torch.unsqueeze(h_v, 0))[0] # 0 or 1???
-        return torch.transpose(h_new,0,1)
+        h_new = self.learn_modules[0](torch.transpose(m_v, 0, 1), torch.unsqueeze(h_v, 0))[0]  # 0 or 1???
+        return torch.transpose(h_new, 0, 1)
 
     def init_ggnn(self, params):
         learn_args = []
@@ -120,7 +119,6 @@ class UpdateFunction(nn.Module):
         learn_modules.append(nn.GRU(params['in_m'], params['out']))
 
         return nn.ParameterList(learn_args), nn.ModuleList(learn_modules), args
-
 
     # Battaglia et al. (2016), Interaction Networks
     def u_intnet(self, h_v, m_v, opt):

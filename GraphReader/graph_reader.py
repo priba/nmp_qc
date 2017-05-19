@@ -305,6 +305,8 @@ def create_graph_gwhist(file):
         g.add_edge(s, t)
         
     for i in range(g.number_of_nodes()):
+        if i not in g.node:
+            g.add_node(i)
         g.node[i]['labels'] = np.array(vl[i])
         
     return g
@@ -324,7 +326,7 @@ def create_graph_grec(file):
             elif (attr.get('name') == 'y'):
                 y = int(attr.find('Integer').text)
             elif (attr.get('name') == 'type'):
-                t = switch_node.get(attr.find('String').text)
+                t = switch_node.get(attr.find('String').text, 4)
         vl += [[x, y, t]]
     g = nx.Graph()
     for edge in root_gxl.iter('edge'):
@@ -339,7 +341,9 @@ def create_graph_grec(file):
                 a = float(attr.find('String').text)
         g.add_edge(s, t, frequency=f, type=ta, angle=a)
 
-    for i in range(g.number_of_nodes()):
+    for i in range(len(vl)):
+        if i not in g.node:
+            g.add_node(i)
         g.node[i]['labels'] = np.array(vl[i][:3])
 
     return g

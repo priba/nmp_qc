@@ -33,7 +33,7 @@ class GREC(data.Dataset):
         return len(self.ids)
 
     def target_transform(self, target):
-        return [ord(target)-65]  # A=65
+        return [int(target)]  # A=65
 
     def vertex_transform(self, g):
         h = []
@@ -76,6 +76,7 @@ if __name__ == '__main__':
     print(len(data_valid))
     print(len(data_test))
 
-    print(data_train[1])
+    for i in range(1000):
+        print(data_train[i])
     print(data_valid[1])
     print(data_test[1])
