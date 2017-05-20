@@ -49,7 +49,7 @@ parser = argparse.ArgumentParser(description='Neural message passing')
 parser.add_argument('--dataset', default='gwhistograph', help='GWHISTOGRAPH')
 parser.add_argument('--datasetPath', default='../data/GWHistoGraphs/', help='dataset path')
 parser.add_argument('--subSet', default='01_Keypoint', help='sub dataset')
-parser.add_argument('--logPath', default='../log/', help='log path')
+parser.add_argument('--logPath', default='../log/gwhist/duvenaud/', help='log path')
 # Optimization Options
 parser.add_argument('--batch-size', type=int, default=20, metavar='N',
                     help='Input batch size for training (default: 20)')

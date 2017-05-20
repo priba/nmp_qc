@@ -49,7 +49,7 @@ parser = argparse.ArgumentParser(description='Neural message passing')
 parser.add_argument('--dataset', default='Letter', help='letter')
 parser.add_argument('--datasetPath', default='../data/Letter/', help='dataset path')
 parser.add_argument('--subSet', default='LOW', help='sub dataset')
-parser.add_argument('--logPath', default='../log/', help='log path')
+parser.add_argument('--logPath', default='../log/letter/duvenaud/', help='log path')
 # Optimization Options
 parser.add_argument('--batch-size', type=int, default=20, metavar='N',
                     help='Input batch size for training (default: 20)')
@@ -243,17 +243,8 @@ def validate(val_loader, model, criterion, evaluation, logger):
         batch_time.update(time.time() - end)
         end = time.time()
 
-        if i % args.log_interval == 0:
-            
-            print('Test: [{0}/{1}]\t'
-                  'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
-                  'Loss {loss.val:.4f} ({loss.avg:.4f})\t'
-                  'Accuracy {acc.val:.4f} ({acc.avg:.4f})'
-                  .format(i, len(val_loader), batch_time=batch_time,
-                          loss=losses, acc=accuracies))
-
-    print(' * Average Accuracy {acc.avg:.3f}'
-          .format(acc=accuracies))
+    print(' * Average Accuracy {acc.avg:.3f}; Average Loss {loss.avg:.3f}'
+          .format(acc=accuracies, loss=losses))
           
     logger.log_value('test_epoch_loss', losses.avg)
     logger.log_value('test_epoch_accuracy', accuracies.avg)

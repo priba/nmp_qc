@@ -49,7 +49,7 @@ parser = argparse.ArgumentParser(description='Neural message passing')
 parser.add_argument('--dataset', default='Letter', help='letter')
 parser.add_argument('--datasetPath', default='../data/Letter/', help='dataset path')
 parser.add_argument('--subSet', default='LOW', help='sub dataset')
-parser.add_argument('--logPath', default='../log/', help='log path')
+parser.add_argument('--logPath', default='../log/letter/ggnn/', help='log path')
 # Optimization Options
 parser.add_argument('--batch-size', type=int, default=20, metavar='N',
                     help='Input batch size for training (default: 20)')
@@ -93,10 +93,11 @@ def main():
     train_ids = train_ids + valid_ids
 
     del valid_classes, valid_ids
-    
-    num_classes = len(list(set(train_classes + test_classes)))
-    data_train = datasets.LETTER(root, subset, train_ids, train_classes, num_classes)
-    data_test = datasets.LETTER(root, subset, test_ids, test_classes, num_classes)
+
+    class_list = list(set(train_classes + test_classes))
+    num_classes = len(class_list)
+    data_train = datasets.LETTER(root, subset, train_ids, train_classes, class_list)
+    data_test = datasets.LETTER(root, subset, test_ids, test_classes, class_list)
     
     # Define model and optimizer
     print('Define model')
@@ -120,7 +121,7 @@ def main():
                                               num_workers=args.prefetch, pin_memory=True)
 
     print('\tCreate model')
-    model = NMP_GGNN(stat_dict['edge_labels'], [len(h_t[0]), len(list(e.values())[0])], 25, 15, 2, len(l), type='classification')
+    model = NMP_GGNN(stat_dict['edge_labels'], [len(h_t[0]), len(list(e.values())[0])], 25, 15, 2, num_classes, type='classification')
 
     print('Check cuda')
     if args.cuda:
@@ -244,17 +245,8 @@ def validate(val_loader, model, criterion, evaluation, logger):
         batch_time.update(time.time() - end)
         end = time.time()
 
-        if i % args.log_interval == 0:
-            
-            print('Test: [{0}/{1}]\t'
-                  'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
-                  'Loss {loss.val:.4f} ({loss.avg:.4f})\t'
-                  'Accuracy {acc.val:.4f} ({acc.avg:.4f})'
-                  .format(i, len(val_loader), batch_time=batch_time,
-                          loss=losses, acc=accuracies))
-
-    print(' * Average Accuracy {acc.avg:.3f}'
-          .format(acc=accuracies))
+    print(' * Average Accuracy {acc.avg:.3f}; Average Loss {loss.avg:.3f}'
+          .format(acc=accuracies, loss=losses))
           
     logger.log_value('test_epoch_loss', losses.avg)
     logger.log_value('test_epoch_accuracy', accuracies.avg)
