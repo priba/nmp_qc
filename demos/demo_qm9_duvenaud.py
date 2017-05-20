@@ -26,6 +26,7 @@ import numpy as np
 reader_folder = os.path.realpath(os.path.abspath('..'))
 if reader_folder not in sys.path:
     sys.path.append(reader_folder)
+
 import datasets
 from datasets import utils
 from models.model import NMP_Duvenaud

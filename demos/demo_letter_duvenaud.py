@@ -66,7 +66,7 @@ parser.add_argument('--schedule', type=list, default=[0.1, 0.9], metavar='S',
 parser.add_argument('--momentum', type=float, default=0.9, metavar='M',
                     help='SGD momentum (default: 0.9)')
 # i/o
-parser.add_argument('--log-interval', type=int, default=100, metavar='N',
+parser.add_argument('--log-interval', type=int, default=74, metavar='N',
                     help='How many batches to wait before logging training status')
 # Accelerating
 parser.add_argument('--prefetch', type=int, default=2, help='Pre-fetching threads.')
@@ -93,10 +93,11 @@ def main():
     train_ids = train_ids + valid_ids
 
     del valid_classes, valid_ids
-    
-    num_classes = len(list(set(train_classes + test_classes)))
-    data_train = datasets.LETTER(root, subset, train_ids, train_classes, num_classes)
-    data_test = datasets.LETTER(root, subset, test_ids, test_classes, num_classes)
+
+    class_list = list(set(train_classes + test_classes))
+    num_classes = len(class_list)
+    data_train = datasets.LETTER(root, subset, train_ids, train_classes, class_list)
+    data_test = datasets.LETTER(root, subset, test_ids, test_classes, class_list)
     
     # Define model and optimizer
     print('Define model')
@@ -106,7 +107,6 @@ def main():
 
     #TODO: Need attention
     print('\tStatistics')
-    stat_dict = {}
     stat_dict = datasets.utils.get_graph_stats(data_train, ['degrees'])
 
     # Data Loader
@@ -118,7 +118,7 @@ def main():
                                               num_workers=args.prefetch, pin_memory=True)
 
     print('\tCreate model')
-    model = NMP_Duvenaud(stat_dict['degrees'], [len(h_t[0]), len(list(e.values())[0])], [5, 15, 15], 30, len(l),
+    model = NMP_Duvenaud(stat_dict['degrees'], [len(h_t[0]), len(list(e.values())[0])], [5, 15, 15], 30, num_classes,
                          type='classification')
 
     print('Check cuda')

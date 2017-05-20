@@ -14,12 +14,12 @@ __email__ = "priba@cvc.uab.cat, adutta@cvc.uab.cat"
 
 
 class LETTER(data.Dataset):
-    def __init__(self, root_path, subset, ids, classes, max_class_num):
+    def __init__(self, root_path, subset, ids, classes, class_list):
         self.root = root_path
         self.subset = subset
         self.classes = classes
         self.ids = ids
-        self.max_class_num = max_class_num
+        self.class_list = class_list
 
     def __getitem__(self, index):
         g = create_graph_letter(os.path.join(self.root, self.subset, self.ids[index]))
@@ -33,7 +33,7 @@ class LETTER(data.Dataset):
         return len(self.ids)
 
     def target_transform(self, target):
-        return [ord(target)-65]  # A=65
+        return [self.class_list.index(target)]
 
     def vertex_transform(self, g):
         h = []

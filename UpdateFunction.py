@@ -92,11 +92,13 @@ class UpdateFunction(nn.Module):
         learn_modules = []
         args = {}
 
-        args['deg'] = params['deg']
+        # Filter degree 0 (the message will be 0 and therefore there is no update
+        args['deg'] = [i for i in params['deg'] if i!=0]
+        args['in'] = params['in']
         args['out'] = params['out']
 
         # Define a parameter matrix H for each degree.
-        learn_args.append(torch.nn.Parameter(torch.randn(len(params['deg']), params['in'], params['out'])))
+        learn_args.append(torch.nn.Parameter(torch.randn(len(args['deg']), args['in'], args['out'])))
 
         return nn.ParameterList(learn_args), nn.ModuleList(learn_modules), args
 
