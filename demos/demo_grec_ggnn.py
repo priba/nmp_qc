@@ -48,7 +48,7 @@ parser = argparse.ArgumentParser(description='Neural message passing')
 
 parser.add_argument('--dataset', default='GREC', help='GREC')
 parser.add_argument('--datasetPath', default='../data/GREC/', help='dataset path')
-parser.add_argument('--logPath', default='../log/', help='log path')
+parser.add_argument('--logPath', default='../log/grec/ggnn/', help='log path')
 # Optimization Options
 parser.add_argument('--batch-size', type=int, default=20, metavar='N',
                     help='Input batch size for training (default: 20)')
@@ -93,8 +93,8 @@ def main():
     del valid_classes, valid_ids
     
     num_classes = len(list(set(train_classes + test_classes)))
-    data_train = datasets.GREC(root, train_ids, train_classes, num_classes)
-    data_test = datasets.GREC(root, test_ids, test_classes, num_classes)
+    data_train = datasets.GREC(root, train_ids, train_classes)
+    data_test = datasets.GREC(root, test_ids, test_classes)
     
     # Define model and optimizer
     print('Define model')
@@ -116,7 +116,7 @@ def main():
                                               num_workers=args.prefetch, pin_memory=True)
 
     print('\tCreate model')
-    model = NMP_GGNN(stat_dict['edge_labels'], [len(h_t[0]), len(list(e.values())[0])], 25, 15, 2, len(l), type='classification')
+    model = NMP_GGNN(stat_dict['edge_labels'], [len(h_t[0]), len(list(e.values())[0])], 25, 15, 2, num_classes, type='classification')
 
     print('Check cuda')
     if args.cuda:

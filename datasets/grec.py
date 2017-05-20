@@ -14,12 +14,11 @@ __email__ = "priba@cvc.uab.cat, adutta@cvc.uab.cat"
 
 
 class GREC(data.Dataset):
-    def __init__(self, root_path, ids, classes, max_class_num):
+    def __init__(self, root_path, ids, classes):
         self.root = root_path
         self.subdir = 'data'
         self.classes = classes
         self.ids = ids
-        self.max_class_num = max_class_num
 
     def __getitem__(self, index):
         g = create_graph_grec(os.path.join(self.root, self.subdir, self.ids[index]))
@@ -33,7 +32,7 @@ class GREC(data.Dataset):
         return len(self.ids)
 
     def target_transform(self, target):
-        return [int(target)]  # A=65
+        return [int(target)-1]
 
     def vertex_transform(self, g):
         h = []
