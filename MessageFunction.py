@@ -100,7 +100,7 @@ class MessageFunction(nn.Module):
         learn_args = []
         learn_modules = []
         args = {}
-        return learn_args, learn_modules, args
+        return nn.ParameterList(learn_args), nn.ModuleList(learn_modules), args
 
     # Li et al. (2016), Gated Graph Neural Networks (GG-NN)
     def m_ggnn(self, h_v, h_w, e_vw, opt={}):

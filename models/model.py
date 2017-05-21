@@ -86,7 +86,7 @@ class NMP_Duvenaud(nn.Module):
         # Readout
         res = self.r.forward(h)
         if self.type == 'classification':
-            res = nn.Softmax()(res)
+            res = nn.LogSoftmax()(res)
         return res
 
 
@@ -152,7 +152,7 @@ class NMP_GGNN(nn.Module):
         # Readout
         res = self.r.forward(h)
         if self.type == 'classification':
-            res = nn.Softmax()(res)
+            res = nn.LogSoftmax()(res)
         return res
 
 
@@ -214,5 +214,5 @@ class NMP_IntNet(nn.Module):
         # Readout
         res = self.r.forward(h)
         if self.type == 'classification':
-            res = nn.Softmax()(res)
+            res = nn.LogSoftmax()(res)
         return res

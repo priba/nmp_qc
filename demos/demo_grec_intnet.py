@@ -116,7 +116,7 @@ def main():
                                               num_workers=args.prefetch, pin_memory=True)
 
     print('\tCreate model')
-    model = NMP_IntNet([len(h_t[0]), len(list(e.values())[0])], [5, 15, 15], [10, 20, 20], num_classes, type='classification')
+    model = NMP_IntNet([len(h_t[0]), len(list(e.values())[0])], [15, 25, 20], [10, 20, 20], num_classes, type='classification')
 
     print('Check cuda')
     if args.cuda:
