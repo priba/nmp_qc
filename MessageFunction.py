@@ -137,8 +137,13 @@ class MessageFunction(nn.Module):
 
     # Battaglia et al. (2016), Interaction Networks
     def m_intnet(self, h_v, h_w, e_vw, args):
-        m = torch.cat([h_v, h_w, e_vw], 1)
+        m = torch.cat([h_v[:,None,:].expand_as(h_w), h_w, e_vw], 2)
+        b_size = m.size()
+
+        m = m.view(-1, b_size[2])
+
         m = self.learn_modules[0](m)
+        m = m.view(b_size[0], b_size[1], -1)
         return m
 
     def out_intnet(self, size_h, size_e, args):
@@ -151,7 +156,7 @@ class MessageFunction(nn.Module):
         args['in'] = params['in']
         args['out'] = params['out']
         learn_modules.append(NNet(n_in=params['in'], n_out=params['out']))
-        return learn_args, learn_modules, args
+        return nn.ParameterList(learn_args), nn.ModuleList(learn_modules), args
 
     # Kearnes et al. (2016), Molecular Graph Convolutions
     def m_mgc(self, h_v, h_w, e_vw, args):

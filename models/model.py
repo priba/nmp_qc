@@ -168,11 +168,13 @@ class NMP_IntNet(nn.Module):
         # Define message 1 & 2
         self.m = nn.ModuleList([MessageFunction('intnet', args={'in': 2*in_n[0] + in_n[1], 'out': out_message[i]})
                                 if i == 0 else
-                                MessageFunction('intnet', args={'in': out_update[i-1], 'out': out_message[i]})
+                                MessageFunction('intnet', args={'in': 2*out_update[i-1] + in_n[1], 'out': out_message[i]})
                                 for i in range(n_layers)])
 
         # Define Update 1 & 2
-        self.u = nn.ModuleList([UpdateFunction('intnet', args={'in': out_message[i], 'out': out_update[i]})
+        self.u = nn.ModuleList([UpdateFunction('intnet', args={'in': in_n[0]+out_message[i], 'out': out_update[i]})
+                                if i == 0 else
+                                UpdateFunction('intnet', args={'in': out_update[i-1]+out_message[i], 'out': out_update[i]})
                                 for i in range(n_layers)])
 
         # Define Readout
@@ -194,20 +196,18 @@ class NMP_IntNet(nn.Module):
             # Apply one layer pass (Message + Update)
             for v in range(0, h_in.size(1)):
 
-                for w in range(h_in.size(1)):
+                m = self.m[t].forward(h[t][:, v, :], h[t], e[:, v, :, :])
 
-                    m = self.m[t].forward(h[t][:, v, :], h[t][:, w, :], e[:, v, w, :]).cuda()
+                # Nodes without edge set message to 0
+                m = g[:, v, :,None].expand_as(m) * m
 
-                    # Nodes without edge set message to 0
-                    m = g[:, v, :, None].expand_as(m) * m
+                m = torch.sum(m, 1)
 
-                    m = torch.sum(m, 1)
+                # Interaction Net
+                opt = {}
+                opt['x_v'] = Variable(torch.Tensor([]).type_as(m.data))
 
-                    # Interaction Net
-                    opt = {}
-                    opt['x_v'] = []
-
-                    h_t[:, v, :] = self.u[t].forward(h[t][:, v, :], m, opt)
+                h_t[:, v, :] = self.u[t].forward(h[t][:, v, :], m, opt)
 
             h.append(h_t.clone())
 

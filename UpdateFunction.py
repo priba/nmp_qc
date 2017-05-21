@@ -124,7 +124,10 @@ class UpdateFunction(nn.Module):
 
     # Battaglia et al. (2016), Interaction Networks
     def u_intnet(self, h_v, m_v, opt):
-        input_tensor = torch.cat([h_v, opt['x_v'], m_v], 2)
+        if opt['x_v'].ndimension():
+            input_tensor = torch.cat([h_v, opt['x_v'], torch.squeeze(m_v)], 1)
+        else:
+            input_tensor = torch.cat([h_v, torch.squeeze(m_v)], 1)
 
         return self.learn_modules[0](input_tensor)
 
