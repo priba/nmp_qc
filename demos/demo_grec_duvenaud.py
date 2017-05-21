@@ -239,17 +239,8 @@ def validate(val_loader, model, criterion, evaluation, logger):
         batch_time.update(time.time() - end)
         end = time.time()
 
-        if i % args.log_interval == 0:
-            
-            print('Test: [{0}/{1}]\t'
-                  'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
-                  'Loss {loss.val:.4f} ({loss.avg:.4f})\t'
-                  'Accuracy {acc.val:.4f} ({acc.avg:.4f})'
-                  .format(i, len(val_loader), batch_time=batch_time,
-                          loss=losses, acc=accuracies))
-
-    print(' * Average Accuracy {acc.avg:.3f}'
-          .format(acc=accuracies))
+    print(' * Average Accuracy {acc.avg:.3f}; Average Loss {loss.avg:.3f}'
+          .format(acc=accuracies, loss=losses))
           
     logger.log_value('test_epoch_loss', losses.avg)
     logger.log_value('test_epoch_accuracy', accuracies.avg)

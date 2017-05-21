@@ -26,7 +26,7 @@ if reader_folder not in sys.path:
     sys.path.append(reader_folder)
 import datasets
 from datasets import utils
-from models.model import NMP_GGNN
+from models.model import NMP_IntNet
 from LogMetric import AverageMeter, Logger
 from GraphReader.graph_reader import read_cxl
 
@@ -46,9 +46,10 @@ def restricted_float(x, inter):
 # Argument parser
 parser = argparse.ArgumentParser(description='Neural message passing')
 
-parser.add_argument('--dataset', default='GREC', help='GREC')
-parser.add_argument('--datasetPath', default='../data/GREC/', help='dataset path')
-parser.add_argument('--logPath', default='../log/grec/ggnn/', help='log path')
+parser.add_argument('--dataset', default='Letter', help='letter')
+parser.add_argument('--datasetPath', default='../data/Letter/', help='dataset path')
+parser.add_argument('--subSet', default='LOW', help='sub dataset')
+parser.add_argument('--logPath', default='../log/letter/intnet/', help='log path')
 # Optimization Options
 parser.add_argument('--batch-size', type=int, default=20, metavar='N',
                     help='Input batch size for training (default: 20)')
@@ -80,21 +81,23 @@ def main():
 
     # Load data
     root = args.datasetPath
+    subset = args.subSet
 
     print('Prepare files')
 
-    train_classes, train_ids = read_cxl(os.path.join(root, 'data/train.cxl'))
-    test_classes, test_ids = read_cxl(os.path.join(root, 'data/test.cxl'))
-    valid_classes, valid_ids = read_cxl(os.path.join(root, 'data/valid.cxl'))
+    train_classes, train_ids = read_cxl(os.path.join(root, subset, 'train.cxl'))
+    test_classes, test_ids = read_cxl(os.path.join(root, subset, 'test.cxl'))
+    valid_classes, valid_ids = read_cxl(os.path.join(root, subset, 'validation.cxl'))
     
     train_classes = train_classes + valid_classes
     train_ids = train_ids + valid_ids
 
     del valid_classes, valid_ids
-    
-    num_classes = len(list(set(train_classes + test_classes)))
-    data_train = datasets.GREC(root, train_ids, train_classes)
-    data_test = datasets.GREC(root, test_ids, test_classes)
+
+    class_list = list(set(train_classes + test_classes))
+    num_classes = len(class_list)
+    data_train = datasets.LETTER(root, subset, train_ids, train_classes, class_list)
+    data_test = datasets.LETTER(root, subset, test_ids, test_classes, class_list)
     
     # Define model and optimizer
     print('Define model')
@@ -105,7 +108,9 @@ def main():
     #TODO: Need attention
     print('\tStatistics')
     stat_dict = {}
-    stat_dict = datasets.utils.get_graph_stats(data_train, ['edge_labels'])
+    # stat_dict = datasets.utils.get_graph_stats(data_train, ['edge_labels'])
+    stat_dict['edge_labels'] = [1]
+
 
     # Data Loader
     train_loader = torch.utils.data.DataLoader(data_train,
@@ -116,7 +121,8 @@ def main():
                                               num_workers=args.prefetch, pin_memory=True)
 
     print('\tCreate model')
-    model = NMP_GGNN(stat_dict['edge_labels'], [len(h_t[0]), len(list(e.values())[0])], 25, 15, 2, num_classes, type='classification')
+    model = NMP_IntNet([len(h_t[0]), len(list(e.values())[0])], [5, 15, 15], [10, 20, 20], num_classes,
+                       type='classification')
 
     print('Check cuda')
     if args.cuda:
