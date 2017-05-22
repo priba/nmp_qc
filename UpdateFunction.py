@@ -53,7 +53,8 @@ class UpdateFunction(nn.Module):
         self.u_function = {
                     'duvenaud':         self.u_duvenaud,
                     'ggnn':             self.u_ggnn,
-                    'intnet':           self.u_intnet
+                    'intnet':           self.u_intnet,
+                    'mpnn':             self.u_mpnn
                 }.get(self.u_definition, None)
 
         if self.u_function is None:
@@ -62,7 +63,8 @@ class UpdateFunction(nn.Module):
         init_parameters = {
             'duvenaud':         self.init_duvenaud,
             'ggnn':             self.init_ggnn,
-            'intnet':           self.init_intnet
+            'intnet':           self.init_intnet,
+            'mpnn':             self.init_mpnn
         }.get(self.u_definition, lambda x: (nn.ParameterList([]), nn.ModuleList([]), {}))
 
         self.learn_args, self.learn_modules, self.args = init_parameters(args)
@@ -142,6 +144,26 @@ class UpdateFunction(nn.Module):
         learn_modules.append(NNet(n_in=params['in'], n_out=params['out']))
 
         return nn.ParameterList(learn_args), nn.ModuleList(learn_modules), args
+
+    def u_mpnn(self, h_v, m_v, opt={}):
+        h_v.contiguous()
+        m_v.contiguous()
+        h_new = self.learn_modules[0](torch.transpose(m_v, 0, 1), torch.unsqueeze(h_v, 0))[0]  # 0 or 1???
+        return torch.transpose(h_new, 0, 1)
+
+    def init_mpnn(self, params):
+        learn_args = []
+        learn_modules = []
+        args = {}
+
+        args['in_m'] = params['in_m']
+        args['out'] = params['out']
+
+        # GRU
+        learn_modules.append(nn.GRU(params['in_m'], params['out']))
+
+        return nn.ParameterList(learn_args), nn.ModuleList(learn_modules), args
+
 
 if __name__ == '__main__':
 

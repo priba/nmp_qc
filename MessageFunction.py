@@ -12,7 +12,7 @@ from __future__ import print_function
 
 # Own modules
 import datasets
-from models.nnet import NNet
+from models.nnet import NNet, NNetM
 
 import numpy as np
 import os
@@ -50,6 +50,7 @@ class MessageFunction(nn.Module):
                     'duvenaud':         self.m_duvenaud,
                     'ggnn':             self.m_ggnn,
                     'intnet':           self.m_intnet,
+                    'mpnn':             self.m_mpnn,
                     'mgc':              self.m_mgc,
                     'bruna':            self.m_bruna,
                     'defferrard':       self.m_deff,
@@ -63,7 +64,8 @@ class MessageFunction(nn.Module):
         init_parameters = {
             'duvenaud': self.init_duvenaud,
             'ggnn':     self.init_ggnn,
-            'intnet':   self.init_intnet
+            'intnet':   self.init_intnet,
+            'mpnn':     self.init_mpnn
         }.get(self.m_definition, lambda x: (nn.ParameterList([]), nn.ModuleList([]), {}))
 
         self.learn_args, self.learn_modules, self.args = init_parameters(args)
@@ -71,7 +73,8 @@ class MessageFunction(nn.Module):
         self.m_size = {
                 'duvenaud':     self.out_duvenaud,
                 'ggnn':         self.out_ggnn,
-                'intnet':       self.out_intnet
+                'intnet':       self.out_intnet,
+                'mpnn':         self.out_mpnn
             }.get(self.m_definition, None)
 
     # Get the name of the used message function
@@ -137,7 +140,7 @@ class MessageFunction(nn.Module):
 
     # Battaglia et al. (2016), Interaction Networks
     def m_intnet(self, h_v, h_w, e_vw, args):
-        m = torch.cat([h_v[:,None,:].expand_as(h_w), h_w, e_vw], 2)
+        m = torch.cat([h_v[:, None, :].expand_as(h_w), h_w, e_vw], 2)
         b_size = m.size()
 
         m = m.view(-1, b_size[2])
@@ -156,6 +159,38 @@ class MessageFunction(nn.Module):
         args['in'] = params['in']
         args['out'] = params['out']
         learn_modules.append(NNet(n_in=params['in'], n_out=params['out']))
+        return nn.ParameterList(learn_args), nn.ModuleList(learn_modules), args
+
+    # Gilmer et al. (2017), Neural Message Passing for Quantum Chemistry
+    def m_mpnn(self, h_v, h_w, e_vw, opt={}):
+
+        m = h_v[:, None, :].expand_as(h_w)
+        b_size = m.size()
+        m = m.contiguous().view(-1, b_size[2])
+        m = self.learn_modules[0](m)
+        m = m.view(b_size[0], b_size[1], self.args['out'], self.args['in'])
+
+        h_new = Variable(torch.Tensor(h_w.size(0), h_w.size(1), self.args['out']).type_as(h_w.data))
+        for w in range(h_w.size(1)):
+            h_new[:, w, :] = torch.transpose(torch.bmm(m[:, w, :, :],
+                                      torch.transpose(torch.unsqueeze(h_w[:, w, :], 1), 1, 2)), 1, 2).clone()
+
+        return h_new
+
+    def out_mpnn(self, size_h, size_e, args):
+        return self.args['out']
+
+    def init_mpnn(self, params):
+        learn_args = []
+        learn_modules = []
+        args = {}
+
+        args['in'] = params['in']
+        args['out'] = params['out']
+
+        # Define a parameter matrix A for each edge label.
+        learn_modules.append(NNetM(n_in=params['in'], n_out=(params['in'], params['out'])))
+
         return nn.ParameterList(learn_args), nn.ModuleList(learn_modules), args
 
     # Kearnes et al. (2016), Molecular Graph Convolutions
