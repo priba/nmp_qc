@@ -17,6 +17,7 @@ import multiprocessing
 import networkx as nx
 import numpy as np
 import shutil
+import os
 
 __author__ = "Pau Riba, Anjan Dutta"
 __email__ = "priba@cvc.uab.cat, adutta@cvc.uab.cat"
@@ -190,6 +191,7 @@ def collate_g(batch):
 def save_checkpoint(state, is_best, filename='checkpoint.pth.tar'):
     torch.save(state, filename)
     if is_best:
-        shutil.copyfile(filename, 'model_best.pth.tar')
+        checkpoint_dir = '/'.join(filename.split('/')[:-1])
+        shutil.copyfile(filename, os.path.join(checkpoint_dir, 'model_best.pth.tar'))
 
 

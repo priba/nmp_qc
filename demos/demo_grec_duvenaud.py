@@ -76,6 +76,7 @@ best_acc1 = 0
 
 
 def main():
+
     global args, best_acc1
     args = parser.parse_args()
 
@@ -170,9 +171,9 @@ def main():
         acc1 = validate(test_loader, model, criterion, evaluation, logger)
 
         is_best = acc1 > best_acc1
-        best_prec1 = max(acc1, best_acc1)
-        utils.save_checkpoint({'epoch': epoch + 1, 'arch': args.arch, 'state_dict': model.state_dict(),
-                         'best_prec1': best_prec1, 'optimizer': optimizer.state_dict(), }, is_best)
+        best_acc1 = max(acc1, best_acc1)
+        utils.save_checkpoint({'epoch': epoch + 1, 'state_dict': model.state_dict(), 'best_acc1': best_acc1,
+                               'optimizer': optimizer.state_dict(), }, is_best=is_best, filename=args.resume)
 
         # Logger step
         logger.log_value('learning_rate', args.lr).step()
