@@ -156,7 +156,7 @@ def main():
         train(train_loader, model, criterion, optimizer, epoch, evaluation, logger)
 
         # evaluate on test set
-        validate(test_loader, model, criterion, evaluation, logger, plotter)
+        validate(test_loader, model, criterion, evaluation, epoch, logger, plotter)
 
         # Logger step
         logger.log_value('learning_rate', args.lr).step()
@@ -220,7 +220,7 @@ def train(train_loader, model, criterion, optimizer, epoch, evaluation, logger):
     logger.log_value('train_epoch_accuracy', accuracies.avg)
 
 
-def validate(val_loader, model, criterion, evaluation, logger, plotter=None):
+def validate(val_loader, model, criterion, evaluation, epoch, logger, plotter=None):
     batch_time = AverageMeter()
     losses = AverageMeter()
     accuracies = AverageMeter()
@@ -236,14 +236,17 @@ def validate(val_loader, model, criterion, evaluation, logger, plotter=None):
             g, h, e, target = g.cuda(), h.cuda(), e.cuda(), target.cuda()
         g, h, e, target = Variable(g), Variable(h), Variable(e), Variable(target)
 
-        if i == 0:
+        if i in [0]:
             num_nodes = torch.sum(torch.sum(torch.abs(h.data[0, :, :]), 1) > 0)
             am = g[0, 0:num_nodes, 0:num_nodes].data.cpu().numpy()
             pos = h[0,0:num_nodes,:].data.cpu().numpy()
-            plotter.plot_graph(am, position=pos, cls='r')
+            plotter.plot_graph(am, position=pos, fig_name=str(i) + '_input.png')
 
-        # Compute output
-        output = model(g, h, e)
+            # Compute output
+            output = model(g, h, e, lambda cls, id: plotter.plot_graph(am, position=pos, cls=cls[0:num_nodes], fig_name='epoch_' + str(epoch) + '_batch_' + str(i) + id))
+        else:
+            # Compute output
+            output = model(g, h, e)
 
         # Logs
         losses.update(criterion(output, torch.squeeze(target.type(torch.cuda.LongTensor))).data[0])

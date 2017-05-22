@@ -42,7 +42,7 @@ class NMP_Duvenaud(nn.Module):
 
         self.type = type
 
-    def forward(self, g, h_in, e):
+    def forward(self, g, h_in, e, plotter=None):
 
         h = []
         h.append(h_in)
@@ -81,6 +81,12 @@ class NMP_Duvenaud(nn.Module):
                         ind = ind.data.cpu().numpy()
                         for j in range(len(ind)):
                            h_t[ind[j], v, :] = aux[j, :]
+
+            if plotter is not None:
+                num_feat = h_t.size(2)
+                color = h_t[0,:,:].data.cpu().numpy()
+                for i in range(num_feat):
+                    plotter(color[:,i], '_layer_' + str(t) + '_element_' + str(i) + '.png')
 
             h.append(h_t.clone())
         # Readout

@@ -100,5 +100,7 @@ data/GREC/*
 
 # log
 log/*
+# plot
+plot/*
 # Pycharm
 .idea

@@ -12,11 +12,13 @@ from __future__ import print_function
 
 import networkx as nx
 import matplotlib
-
-import matplotlib.pyplot as plt
-import os
-
 matplotlib.use("Agg")
+import matplotlib.pyplot as plt
+import matplotlib.colors as mcol
+import matplotlib.cm as cm
+import os
+import warnings
+
 
 __author__ = "Pau Riba, Anjan Dutta"
 __email__ = "priba@cvc.uab.cat, adutta@cvc.uab.cat"
@@ -49,15 +51,34 @@ class Plotter():
 
     def plot_graph(self, am, position=None, cls=None, fig_name='graph.png'):
 
-        g = nx.from_numpy_matrix(am)
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore")
 
-        if position is None:
-            position=nx.drawing.circular_layout(g)
+            g = nx.from_numpy_matrix(am)
 
-        if cls is None:
-            cls='r'
+            if position is None:
+                position=nx.drawing.circular_layout(g)
 
-        fig = plt.figure()
-        nx.draw(g, pos=position, node_color=cls, ax=fig.add_subplot(111))
+            fig = plt.figure()
 
-        fig.savefig(os.path.join(self.plotdir, fig_name))
+            if cls is None:
+                cls='r'
+            else:
+                # Make a user-defined colormap.
+                cm1 = mcol.LinearSegmentedColormap.from_list("MyCmapName", ["r", "b"])
+
+                # Make a normalizer that will map the time values from
+                # [start_time,end_time+1] -> [0,1].
+                cnorm = mcol.Normalize(vmin=min(cls), vmax=max(cls))
+
+                # Turn these into an object that can be used to map time values to colors and
+                # can be passed to plt.colorbar().
+                cpick = cm.ScalarMappable(norm=cnorm, cmap=cm1)
+                cpick.set_array([])
+                cls = cpick.to_rgba(cls)
+                plt.colorbar(cpick, ax=fig.add_subplot(111))
+
+
+            nx.draw(g, pos=position, node_color=cls, ax=fig.add_subplot(111))
+
+            fig.savefig(os.path.join(self.plotdir, fig_name))
