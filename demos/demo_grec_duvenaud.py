@@ -48,7 +48,9 @@ parser = argparse.ArgumentParser(description='Neural message passing')
 
 parser.add_argument('--dataset', default='GREC', help='GREC')
 parser.add_argument('--datasetPath', default='../data/GREC/', help='dataset path')
-parser.add_argument('--logPath', default='../log/grec/duvenaud/', help='log path')
+parser.add_argument('--logPath', default='../log/grec/duvenaud/checkpoint', help='log path')
+parser.add_argument('--resume', default='../checkpoint/grec/duvenaud/checkpoint.pth.tar',
+                    help='path to latest checkpoint')
 # Optimization Options
 parser.add_argument('--batch-size', type=int, default=20, metavar='N',
                     help='Input batch size for training (default: 20)')
@@ -70,9 +72,11 @@ parser.add_argument('--log-interval', type=int, default=100, metavar='N',
 # Accelerating
 parser.add_argument('--prefetch', type=int, default=2, help='Pre-fetching threads.')
 
+best_acc1 = 0
+
 
 def main():
-    global args
+    global args, best_acc1
     args = parser.parse_args()
 
     # Check if CUDA is enabled
@@ -135,6 +139,22 @@ def main():
 
     lr_step = (args.lr-args.lr*args.lr_decay)/(args.epochs*args.schedule[1] - args.epochs*args.schedule[0])
 
+    # optionally resume from a checkpoint
+    if args.resume:
+        checkpoint_dir = '/'.join(args.resume.split('/')[:-1])
+        if not os.path.isdir(checkpoint_dir):
+            os.makedirs(checkpoint_dir)
+        if os.path.isfile(args.resume):
+            print("=> loading checkpoint '{}'".format(args.resume))
+            checkpoint = torch.load(args.resume)
+            args.start_epoch = checkpoint['epoch']
+            best_acc1 = checkpoint['best_acc1']
+            model.load_state_dict(checkpoint['state_dict'])
+            optimizer.load_state_dict(checkpoint['optimizer'])
+            print("=> loaded checkpoint '{}' (epoch {})" .format(args.resume, checkpoint['epoch']))
+        else:
+            print("=> no checkpoint found at '{}'".format(args.resume))
+
     # Epoch for loop
     for epoch in range(0, args.epochs):
 
@@ -147,7 +167,12 @@ def main():
         train(train_loader, model, criterion, optimizer, epoch, evaluation, logger)
 
         # evaluate on test set
-        validate(test_loader, model, criterion, evaluation, logger)
+        acc1 = validate(test_loader, model, criterion, evaluation, logger)
+
+        is_best = acc1 > best_acc1
+        best_prec1 = max(acc1, best_acc1)
+        utils.save_checkpoint({'epoch': epoch + 1, 'arch': args.arch, 'state_dict': model.state_dict(),
+                         'best_prec1': best_prec1, 'optimizer': optimizer.state_dict(), }, is_best)
 
         # Logger step
         logger.log_value('learning_rate', args.lr).step()
@@ -244,6 +269,8 @@ def validate(val_loader, model, criterion, evaluation, logger):
           
     logger.log_value('test_epoch_loss', losses.avg)
     logger.log_value('test_epoch_accuracy', accuracies.avg)
+
+    return accuracies.avg
     
 if __name__ == '__main__':
     main()

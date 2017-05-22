@@ -15,9 +15,8 @@ import torch
 from joblib import Parallel, delayed
 import multiprocessing
 import networkx as nx
-
 import numpy as np
-
+import shutil
 
 __author__ = "Pau Riba, Anjan Dutta"
 __email__ = "priba@cvc.uab.cat, adutta@cvc.uab.cat"
@@ -186,5 +185,11 @@ def collate_g(batch):
     target = torch.FloatTensor(target)
 
     return g, h, e, target
+
+
+def save_checkpoint(state, is_best, filename='checkpoint.pth.tar'):
+    torch.save(state, filename)
+    if is_best:
+        shutil.copyfile(filename, 'model_best.pth.tar')
 
 
