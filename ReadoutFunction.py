@@ -53,7 +53,8 @@ class ReadoutFunction(nn.Module):
         self.r_function = {
                     'duvenaud': self.r_duvenaud,
                     'ggnn':     self.r_ggnn,
-                    'intnet':   self.r_intnet
+                    'intnet':   self.r_intnet,
+                    'mpnn':     self.r_mpnn
                 }.get(self.r_definition, None)
 
         if self.r_function is None:
@@ -63,7 +64,8 @@ class ReadoutFunction(nn.Module):
         init_parameters = {
             'duvenaud': self.init_duvenaud,
             'ggnn':     self.init_ggnn,
-            'intnet':   self.init_intnet
+            'intnet':   self.init_intnet,
+            'mpnn':     self.init_mpnn
         }.get(self.r_definition, lambda x: (nn.ParameterList([]), nn.ModuleList([]), {}))
 
         self.learn_args, self.learn_modules, self.args = init_parameters(args)
@@ -152,6 +154,35 @@ class ReadoutFunction(nn.Module):
         args = {}
 
         learn_modules.append(NNet(n_in=params['in'], n_out=params['target']))
+
+        return nn.ParameterList(learn_args), nn.ModuleList(learn_modules), args
+
+    def r_mpnn(self, h):
+
+        aux = Variable( torch.Tensor(h[0].size(0), self.args['out']).type_as(h[0].data).zero_() )
+        # For each graph
+        for i in range(h[0].size(0)):
+            nn_res = nn.Sigmoid()(self.learn_modules[0](torch.cat([h[0][i,:,:], h[-1][i,:,:]], 1)))*self.learn_modules[1](h[-1][i,:,:])
+
+            # Delete virtual nodes
+            nn_res = (torch.sum(h[0][i,:,:],1).expand_as(nn_res)>0).type_as(nn_res)* nn_res
+
+            aux[i,:] = torch.sum(nn_res,0)
+
+        return aux
+
+    def init_mpnn(self, params):
+        learn_args = []
+        learn_modules = []
+        args = {}
+
+        # i
+        learn_modules.append(NNet(n_in=2*params['in'], n_out=params['target']))
+
+        # j
+        learn_modules.append(NNet(n_in=params['in'], n_out=params['target']))
+
+        args['out'] = params['target']
 
         return nn.ParameterList(learn_args), nn.ModuleList(learn_modules), args
 
