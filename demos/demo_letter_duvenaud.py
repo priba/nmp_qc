@@ -29,6 +29,7 @@ from datasets import utils
 from models.model import NMP_Duvenaud
 from LogMetric import AverageMeter, Logger
 from GraphReader.graph_reader import read_cxl
+from visualization.Plotter import Plotter
 
 __author__ = "Pau Riba, Anjan Dutta"
 __email__ = "priba@cvc.uab.cat, adutta@cvc.uab.cat"
@@ -50,6 +51,7 @@ parser.add_argument('--dataset', default='Letter', help='letter')
 parser.add_argument('--datasetPath', default='../data/Letter/', help='dataset path')
 parser.add_argument('--subSet', default='LOW', help='sub dataset')
 parser.add_argument('--logPath', default='../log/letter/duvenaud/', help='log path')
+parser.add_argument('--plotPath', default='../plot/letter/duvenaud/', help='plot path')
 # Optimization Options
 parser.add_argument('--batch-size', type=int, default=20, metavar='N',
                     help='Input batch size for training (default: 20)')
@@ -82,6 +84,7 @@ def main():
     # Load data
     root = args.datasetPath
     subset = args.subSet
+
 
     print('Prepare files')
 
@@ -136,6 +139,8 @@ def main():
 
     print('Logger')
     logger = Logger(args.logPath)
+    print('Plotter')
+    plotter = Plotter(args.plotPath)
 
     lr_step = (args.lr-args.lr*args.lr_decay)/(args.epochs*args.schedule[1] - args.epochs*args.schedule[0])
 
@@ -151,7 +156,7 @@ def main():
         train(train_loader, model, criterion, optimizer, epoch, evaluation, logger)
 
         # evaluate on test set
-        validate(test_loader, model, criterion, evaluation, logger)
+        validate(test_loader, model, criterion, evaluation, logger, plotter)
 
         # Logger step
         logger.log_value('learning_rate', args.lr).step()
@@ -215,7 +220,7 @@ def train(train_loader, model, criterion, optimizer, epoch, evaluation, logger):
     logger.log_value('train_epoch_accuracy', accuracies.avg)
 
 
-def validate(val_loader, model, criterion, evaluation, logger):
+def validate(val_loader, model, criterion, evaluation, logger, plotter=None):
     batch_time = AverageMeter()
     losses = AverageMeter()
     accuracies = AverageMeter()
@@ -230,6 +235,12 @@ def validate(val_loader, model, criterion, evaluation, logger):
         if args.cuda:
             g, h, e, target = g.cuda(), h.cuda(), e.cuda(), target.cuda()
         g, h, e, target = Variable(g), Variable(h), Variable(e), Variable(target)
+
+        if i == 0:
+            num_nodes = torch.sum(torch.sum(torch.abs(h.data[0, :, :]), 1) > 0)
+            am = g[0, 0:num_nodes, 0:num_nodes].data.cpu().numpy()
+            pos = h[0,0:num_nodes,:].data.cpu().numpy()
+            plotter.plot_graph(am, position=pos, cls='r')
 
         # Compute output
         output = model(g, h, e)
