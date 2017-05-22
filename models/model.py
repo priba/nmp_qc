@@ -86,7 +86,7 @@ class NMP_Duvenaud(nn.Module):
                 num_feat = h_t.size(2)
                 color = h_t[0,:,:].data.cpu().numpy()
                 for i in range(num_feat):
-                    plotter(color[:,i], '_layer_' + str(t) + '_element_' + str(i) + '.png')
+                    plotter(color[:,i], 'layer_' + str(t) + '_element_' + str(i) + '.png')
 
             h.append(h_t.clone())
         # Readout

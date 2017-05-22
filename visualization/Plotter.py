@@ -69,7 +69,7 @@ class Plotter():
 
                 # Make a normalizer that will map the time values from
                 # [start_time,end_time+1] -> [0,1].
-                cnorm = mcol.Normalize(vmin=min(cls), vmax=max(cls))
+                cnorm = mcol.Normalize(vmin=0, vmax=1)
 
                 # Turn these into an object that can be used to map time values to colors and
                 # can be passed to plt.colorbar().

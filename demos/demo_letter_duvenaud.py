@@ -20,6 +20,7 @@ import argparse
 import os
 import sys
 
+import numpy as np
 # Our Modules
 reader_folder = os.path.realpath(os.path.abspath('..'))
 if reader_folder not in sys.path:
@@ -51,6 +52,7 @@ parser.add_argument('--dataset', default='Letter', help='letter')
 parser.add_argument('--datasetPath', default='../data/Letter/', help='dataset path')
 parser.add_argument('--subSet', default='LOW', help='sub dataset')
 parser.add_argument('--logPath', default='../log/letter/duvenaud/', help='log path')
+parser.add_argument('--plotLr', default=False, help='alolow plotting the data')
 parser.add_argument('--plotPath', default='../plot/letter/duvenaud/', help='plot path')
 # Optimization Options
 parser.add_argument('--batch-size', type=int, default=20, metavar='N',
@@ -139,8 +141,10 @@ def main():
 
     print('Logger')
     logger = Logger(args.logPath)
-    print('Plotter')
-    plotter = Plotter(args.plotPath)
+
+    if args.plotLr:
+        print('Plotter')
+        plotter = Plotter(args.plotPath)
 
     lr_step = (args.lr-args.lr*args.lr_decay)/(args.epochs*args.schedule[1] - args.epochs*args.schedule[0])
 
@@ -156,7 +160,11 @@ def main():
         train(train_loader, model, criterion, optimizer, epoch, evaluation, logger)
 
         # evaluate on test set
-        validate(test_loader, model, criterion, evaluation, epoch, logger, plotter)
+        validate(test_loader, model, criterion, evaluation, logger)
+
+        if args.plotLr:
+            # plot learning
+            plot_examples(test_loader, model, epoch, plotter)
 
         # Logger step
         logger.log_value('learning_rate', args.lr).step()
@@ -220,7 +228,7 @@ def train(train_loader, model, criterion, optimizer, epoch, evaluation, logger):
     logger.log_value('train_epoch_accuracy', accuracies.avg)
 
 
-def validate(val_loader, model, criterion, evaluation, epoch, logger, plotter=None):
+def validate(val_loader, model, criterion, evaluation, logger):
     batch_time = AverageMeter()
     losses = AverageMeter()
     accuracies = AverageMeter()
@@ -236,17 +244,8 @@ def validate(val_loader, model, criterion, evaluation, epoch, logger, plotter=No
             g, h, e, target = g.cuda(), h.cuda(), e.cuda(), target.cuda()
         g, h, e, target = Variable(g), Variable(h), Variable(e), Variable(target)
 
-        if i in [0]:
-            num_nodes = torch.sum(torch.sum(torch.abs(h.data[0, :, :]), 1) > 0)
-            am = g[0, 0:num_nodes, 0:num_nodes].data.cpu().numpy()
-            pos = h[0,0:num_nodes,:].data.cpu().numpy()
-            plotter.plot_graph(am, position=pos, fig_name=str(i) + '_input.png')
-
-            # Compute output
-            output = model(g, h, e, lambda cls, id: plotter.plot_graph(am, position=pos, cls=cls[0:num_nodes], fig_name='epoch_' + str(epoch) + '_batch_' + str(i) + id))
-        else:
-            # Compute output
-            output = model(g, h, e)
+        # Compute output
+        output = model(g, h, e)
 
         # Logs
         losses.update(criterion(output, torch.squeeze(target.type(torch.cuda.LongTensor))).data[0])
@@ -262,6 +261,35 @@ def validate(val_loader, model, criterion, evaluation, epoch, logger, plotter=No
           
     logger.log_value('test_epoch_loss', losses.avg)
     logger.log_value('test_epoch_accuracy', accuracies.avg)
+
+
+def plot_examples(data_loader, model, epoch, plotter, ind = [0, 10, 20]):
+
+    # switch to evaluate mode
+    model.eval()
+
+    for i, (g, h, e, target) in enumerate(data_loader):
+        if i in ind:
+            subfolder_path = 'batch_' + str(i) + '_t_' + str(int(target[0][0])) + '/epoch_' + str(epoch) + '/'
+            if not os.path.isdir(args.plotPath + subfolder_path):
+                os.makedirs(args.plotPath + subfolder_path)
+
+            num_nodes = torch.sum(torch.sum(torch.abs(h[0, :, :]), 1) > 0)
+            am = g[0, 0:num_nodes, 0:num_nodes].numpy()
+            pos = h[0, 0:num_nodes, :].numpy()
+
+            plotter.plot_graph(am, position=pos, fig_name=subfolder_path+str(i) + '_input.png')
+
+            # Prepare input data
+            if args.cuda:
+                g, h, e, target = g.cuda(), h.cuda(), e.cuda(), target.cuda()
+            g, h, e, target = Variable(g), Variable(h), Variable(e), Variable(target)
+
+            # Compute output
+            model(g, h, e, lambda cls, id: plotter.plot_graph(am, position=pos, cls=cls,
+                                                          fig_name=subfolder_path+ id))
+
+
     
 if __name__ == '__main__':
     main()
