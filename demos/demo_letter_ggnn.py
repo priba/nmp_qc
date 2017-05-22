@@ -134,6 +134,7 @@ def main():
 
     print('Check cuda')
     if args.cuda:
+        print('\tCuda')
         model.cuda()
 
     print('Optimizer')

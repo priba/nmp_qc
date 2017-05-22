@@ -66,7 +66,7 @@ parser.add_argument('--schedule', type=list, default=[0.1, 0.9], metavar='S',
 parser.add_argument('--momentum', type=float, default=0.9, metavar='M',
                     help='SGD momentum (default: 0.9)')
 # i/o
-parser.add_argument('--log-interval', type=int, default=100, metavar='N',
+parser.add_argument('--log-interval', type=int, default=1, metavar='N',
                     help='How many batches to wait before logging training status')
 # Accelerating
 parser.add_argument('--prefetch', type=int, default=2, help='Pre-fetching threads.')
@@ -122,6 +122,7 @@ def main():
 
     print('Check cuda')
     if args.cuda:
+        print('\tCuda')
         model.cuda()
 
     print('Optimizer')
@@ -168,11 +169,12 @@ def train(train_loader, model, criterion, optimizer, epoch, evaluation, logger):
     end = time.time()
     for i, (g, h, e, target) in enumerate(train_loader):
         
-        # Prepare input data
+
+
         if args.cuda:
             g, h, e, target = g.cuda(), h.cuda(), e.cuda(), target.cuda()
+            # Prepare input data
         g, h, e, target = Variable(g), Variable(h), Variable(e), Variable(target)
-
         # Measure data loading time
         data_time.update(time.time() - end)
 
@@ -181,7 +183,10 @@ def train(train_loader, model, criterion, optimizer, epoch, evaluation, logger):
 
             # Compute output
             output = model(g, h, e)
+
+            print(target)
             train_loss = criterion(output, torch.squeeze(target.type(torch.cuda.LongTensor)))
+
             # compute gradient and do SGD step
             train_loss.backward()
             return train_loss

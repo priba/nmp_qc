@@ -69,14 +69,14 @@ class NMP_Duvenaud(nn.Module):
 
                 for i in range(len(u_args['deg'])):
                     ind = deg == u_args['deg'][i]
-                    ind = Variable(torch.squeeze(torch.nonzero(torch.squeeze(ind))))
+                    ind = Variable(torch.squeeze(torch.nonzero(torch.squeeze(ind))), volatile=True)
 
                     opt = {'deg': i}
 
                     # Separate degrees
                     # Update
                     if len(ind) != 0:
-                        aux = self.u[t].forward(torch.index_select(h[t].clone(), 0, ind)[:, v, :], torch.index_select(m.clone(), 0, ind), opt)
+                        aux = self.u[t].forward(torch.index_select(h[t], 0, ind)[:, v, :], torch.index_select(m, 0, ind), opt)
 
                         ind = ind.data.cpu().numpy()
                         for j in range(len(ind)):
@@ -152,7 +152,7 @@ class NMP_GGNN(nn.Module):
                 h_t[:, v, :] = self.u[0].forward(h[t][:, v, :], m)
 
             # Delete virtual nodes
-            h_t = (torch.sum(h_in, 2).expand_as(h_t) > 0).type_as(h_t)*h_t
+            h_t = (torch.sum(torch.abs(h_in), 2).expand_as(h_t) > 0).type_as(h_t)*h_t
             h.append(h_t.clone())
 
         # Readout

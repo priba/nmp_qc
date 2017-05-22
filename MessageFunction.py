@@ -107,19 +107,22 @@ class MessageFunction(nn.Module):
 
     # Li et al. (2016), Gated Graph Neural Networks (GG-NN)
     def m_ggnn(self, h_v, h_w, e_vw, opt={}):
-        parameter_mat = nn.Parameter(torch.Tensor(np.zeros((h_w.size(0), h_w.size(1), self.args['in'],
-                                                            self.args['out']))).type_as(self.learn_args[0].data))
-        for i, el in enumerate(self.args['e_label']):
-            ind = (el == e_vw).type_as(parameter_mat)
-            parameter_mat = parameter_mat + ind[..., None].expand_as(parameter_mat) * \
-                                            self.learn_args[0][i].expand_as(parameter_mat)
 
-        h_new = Variable(torch.Tensor(h_w.size(0), h_w.size(1), self.args['out']).type_as(h_w.data))
+        m = Variable(torch.Tensor(h_w.size(0), h_w.size(1), self.args['out']).type_as(h_w.data))
 
         for w in range(h_w.size(1)):
-            h_new[:, w, :] = torch.transpose(torch.bmm(torch.transpose(parameter_mat[:, w, :, :], 1, 2),
-                                                 torch.transpose(torch.unsqueeze(h_w[:, w, :], 1), 1, 2)), 1, 2).clone()
-        return h_new
+            for i, el in enumerate(self.args['e_label']):
+                ind = (el == e_vw[:,w,:]).type_as(self.learn_args[0][i])
+
+                parameter_mat = ind[..., None].expand(h_w.size(0), self.learn_args[0][i].size(0),
+                                                      self.learn_args[0][i].size(1))*\
+                                self.learn_args[0][i][None, ...].expand(h_w.size(0), self.learn_args[0][i].size(0),
+                                                                        self.learn_args[0][i].size(1))
+
+                m[:, w, :] = m[:, w, :] + torch.transpose(torch.bmm(torch.transpose(parameter_mat, 1, 2),
+                                                                    torch.transpose(torch.unsqueeze(h_w[:, w, :], 1),
+                                                                                    1, 2)), 1, 2)
+        return m
 
     def out_ggnn(self, size_h, size_e, args):
         return self.args['out']
