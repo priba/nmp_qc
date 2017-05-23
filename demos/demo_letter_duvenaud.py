@@ -96,15 +96,11 @@ def main():
     train_classes, train_ids = read_cxl(os.path.join(root, subset, 'train.cxl'))
     test_classes, test_ids = read_cxl(os.path.join(root, subset, 'test.cxl'))
     valid_classes, valid_ids = read_cxl(os.path.join(root, subset, 'validation.cxl'))
-    
-    train_classes = train_classes + valid_classes
-    train_ids = train_ids + valid_ids
-
-    del valid_classes, valid_ids
 
     class_list = list(set(train_classes + test_classes))
     num_classes = len(class_list)
     data_train = datasets.LETTER(root, subset, train_ids, train_classes, class_list)
+    data_valid = datasets.LETTER(root, subset, valid_ids, valid_classes, class_list)
     data_test = datasets.LETTER(root, subset, test_ids, test_classes, class_list)
     
     # Define model and optimizer
@@ -118,11 +114,14 @@ def main():
     stat_dict = datasets.utils.get_graph_stats(data_train, ['degrees'])
 
     # Data Loader
-    train_loader = torch.utils.data.DataLoader(data_train,
-                                               batch_size=args.batch_size, shuffle=True, collate_fn=datasets.utils.collate_g,
+    train_loader = torch.utils.data.DataLoader(data_train, batch_size=args.batch_size, shuffle=True,
+                                               collate_fn=datasets.utils.collate_g,
                                                num_workers=args.prefetch, pin_memory=True)
-    test_loader = torch.utils.data.DataLoader(data_test,
-                                              batch_size=args.batch_size, shuffle=False, collate_fn=datasets.utils.collate_g,
+    valid_loader = torch.utils.data.DataLoader(data_valid, batch_size=args.batch_size,
+                                               collate_fn=datasets.utils.collate_g,
+                                               num_workers=args.prefetch, pin_memory=True)
+    test_loader = torch.utils.data.DataLoader(data_test, batch_size=args.batch_size,
+                                              collate_fn=datasets.utils.collate_g,
                                               num_workers=args.prefetch, pin_memory=True)
 
     print('\tCreate model')

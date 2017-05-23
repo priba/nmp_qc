@@ -112,11 +112,11 @@ def main():
                                                collate_fn=datasets.utils.collate_g, num_workers=args.prefetch,
                                                pin_memory=True)
     valid_loader = torch.utils.data.DataLoader(data_valid,
-                                               batch_size=args.batch_size, shuffle=True,
+                                               batch_size=args.batch_size,
                                                collate_fn=datasets.utils.collate_g, num_workers=args.prefetch,
                                                pin_memory=True)
     test_loader = torch.utils.data.DataLoader(data_test,
-                                              batch_size=args.batch_size, shuffle=False,
+                                              batch_size=args.batch_size,
                                               collate_fn=datasets.utils.collate_g, num_workers=args.prefetch,
                                               pin_memory=True)
 
