@@ -188,10 +188,14 @@ def collate_g(batch):
     return g, h, e, target
 
 
-def save_checkpoint(state, is_best, filename='checkpoint.pth.tar'):
-    torch.save(state, filename)
+def save_checkpoint(state, is_best, directory):
+
+    if not os.path.isdir(directory):
+        os.makedirs(directory)
+    checkpoint_file = os.path.join(directory, 'checkpoint.pth.tar')
+    best_model_file = os.path.join(directory, 'model_best.pth.tar')
+    torch.save(state, checkpoint_file)
     if is_best:
-        checkpoint_dir = '/'.join(filename.split('/')[:-1])
-        shutil.copyfile(filename, os.path.join(checkpoint_dir, 'model_best.pth.tar'))
+        shutil.copyfile(checkpoint_file, best_model_file)
 
 

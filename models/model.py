@@ -229,7 +229,7 @@ class NMP_MPNN(nn.Module):
     in_n (size_v, size_e)
     """
 
-    def __init__(self, d, in_n, hidden_state_size, message_size, n_layers, l_target, type='regression'):
+    def __init__(self, in_n, hidden_state_size, message_size, n_layers, l_target, type='regression'):
         super(NMP_MPNN, self).__init__()
 
         # Define message

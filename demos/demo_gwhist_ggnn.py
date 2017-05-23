@@ -50,6 +50,10 @@ parser.add_argument('--dataset', default='gwhistograph', help='GWHISTOGRAPH')
 parser.add_argument('--datasetPath', default='../data/GWHistoGraphs/', help='dataset path')
 parser.add_argument('--subSet', default='01_Keypoint', help='sub dataset')
 parser.add_argument('--logPath', default='../log/gwhist/ggnn/', help='log path')
+parser.add_argument('--plotLr', default=False, help='allow plotting the data')
+parser.add_argument('--plotPath', default='../plot/gwhist/ggnn/', help='plot path')
+parser.add_argument('--resume', default='../checkpoint/gwhist/ggnn/checkpoint.pth.tar',
+                    help='path to latest checkpoint')
 # Optimization Options
 parser.add_argument('--batch-size', type=int, default=20, metavar='N',
                     help='Input batch size for training (default: 20)')
@@ -71,9 +75,12 @@ parser.add_argument('--log-interval', type=int, default=1, metavar='N',
 # Accelerating
 parser.add_argument('--prefetch', type=int, default=2, help='Pre-fetching threads.')
 
+best_acc1 = 0
+
 
 def main():
-    global args
+
+    global args, best_acc1
     args = parser.parse_args()
 
     # Check if CUDA is enabled
@@ -98,6 +105,7 @@ def main():
     
     num_classes = max(train_classes + test_classes) + 1
     data_train = datasets.GWHISTOGRAPH(root, subset, train_ids, train_classes, num_classes)
+    data_valid = datasets.GWHISTOGRAPH(root, subset, valid_ids, valid_classes, num_classes)
     data_test = datasets.GWHISTOGRAPH(root, subset, test_ids, test_classes, num_classes)
     
     # Define model and optimizer
@@ -112,6 +120,10 @@ def main():
     # Data Loader
     train_loader = torch.utils.data.DataLoader(data_train,
                                                batch_size=args.batch_size, shuffle=True, collate_fn=datasets.utils.collate_g,
+                                               num_workers=args.prefetch, pin_memory=True)
+    valid_loader = torch.utils.data.DataLoader(data_valid,
+                                               batch_size=args.batch_size, shuffle=True,
+                                               collate_fn=datasets.utils.collate_g,
                                                num_workers=args.prefetch, pin_memory=True)
     test_loader = torch.utils.data.DataLoader(data_test,
                                               batch_size=args.batch_size, shuffle=False, collate_fn=datasets.utils.collate_g,
@@ -139,10 +151,27 @@ def main():
 
     lr_step = (args.lr-args.lr*args.lr_decay)/(args.epochs*args.schedule[1] - args.epochs*args.schedule[0])
 
+    # get the best checkpoint if available without training
+    if args.resume:
+        checkpoint_dir = args.resume
+        best_model_file = os.path.join(checkpoint_dir, 'model_best.pth.tar')
+        if not os.path.isdir(checkpoint_dir):
+            os.makedirs(checkpoint_dir)
+        if os.path.isfile(best_model_file):
+            print("=> loading best model '{}'".format(best_model_file))
+            checkpoint = torch.load(best_model_file)
+            args.start_epoch = checkpoint['epoch']
+            best_acc1 = checkpoint['best_acc1']
+            model.load_state_dict(checkpoint['state_dict'])
+            optimizer.load_state_dict(checkpoint['optimizer'])
+            print("=> loaded best model '{}' (epoch {})".format(best_model_file, checkpoint['epoch']))
+        else:
+            print("=> no best model found at '{}'".format(best_model_file))
+
     # Epoch for loop
     for epoch in range(0, args.epochs):
 
-        if epoch > args.epochs*args.schedule[0] and epoch < args.epochs*args.schedule[1]:
+        if epoch > args.epochs * args.schedule[0] and epoch < args.epochs * args.schedule[1]:
             args.lr -= lr_step
             for param_group in optimizer.param_groups:
                 param_group['lr'] = args.lr
@@ -151,10 +180,35 @@ def main():
         train(train_loader, model, criterion, optimizer, epoch, evaluation, logger)
 
         # evaluate on test set
-        validate(test_loader, model, criterion, evaluation, logger)
+        acc1 = validate(valid_loader, model, criterion, evaluation, logger)
+
+        is_best = acc1 > best_acc1
+        best_acc1 = max(acc1, best_acc1)
+        utils.save_checkpoint({'epoch': epoch + 1, 'state_dict': model.state_dict(), 'best_acc1': best_acc1,
+                               'optimizer': optimizer.state_dict(), }, is_best=is_best, directory=args.resume)
 
         # Logger step
         logger.log_value('learning_rate', args.lr).step()
+
+    # get the best checkpoint and test it with test set
+    if args.resume:
+        checkpoint_dir = args.resume
+        best_model_file = os.path.join(checkpoint_dir, 'model_best.pth.tar')
+        if not os.path.isdir(checkpoint_dir):
+            os.makedirs(checkpoint_dir)
+        if os.path.isfile(best_model_file):
+            print("=> loading best model '{}'".format(best_model_file))
+            checkpoint = torch.load(best_model_file)
+            args.start_epoch = checkpoint['epoch']
+            best_acc1 = checkpoint['best_acc1']
+            model.load_state_dict(checkpoint['state_dict'])
+            optimizer.load_state_dict(checkpoint['optimizer'])
+            print("=> loaded best model '{}' (epoch {})".format(best_model_file, checkpoint['epoch']))
+        else:
+            print("=> no best model found at '{}'".format(best_model_file))
+
+    # For testing
+    validate(test_loader, model, criterion, evaluation)
 
 
 def train(train_loader, model, criterion, optimizer, epoch, evaluation, logger):
@@ -260,6 +314,8 @@ def validate(val_loader, model, criterion, evaluation, logger):
           
     logger.log_value('test_epoch_loss', losses.avg)
     logger.log_value('test_epoch_accuracy', accuracies.avg)
+
+    return accuracies.avg
     
 if __name__ == '__main__':
     main()

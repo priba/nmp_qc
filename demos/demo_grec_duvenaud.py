@@ -49,8 +49,7 @@ parser = argparse.ArgumentParser(description='Neural message passing')
 parser.add_argument('--dataset', default='GREC', help='GREC')
 parser.add_argument('--datasetPath', default='../data/GREC/', help='dataset path')
 parser.add_argument('--logPath', default='../log/grec/duvenaud/checkpoint', help='log path')
-parser.add_argument('--resume', default='../checkpoint/grec/duvenaud/checkpoint.pth.tar',
-                    help='path to latest checkpoint')
+parser.add_argument('--resume', default='../checkpoint/grec/duvenaud', help='path to latest checkpoint')
 # Optimization Options
 parser.add_argument('--batch-size', type=int, default=20, metavar='N',
                     help='Input batch size for training (default: 20)')
@@ -89,16 +88,13 @@ def main():
     print('Prepare files')
 
     train_classes, train_ids = read_cxl(os.path.join(root, 'data/train.cxl'))
-    test_classes, test_ids = read_cxl(os.path.join(root, 'data/test.cxl'))
     valid_classes, valid_ids = read_cxl(os.path.join(root, 'data/valid.cxl'))
-    
-    train_classes = train_classes + valid_classes
-    train_ids = train_ids + valid_ids
+    test_classes, test_ids = read_cxl(os.path.join(root, 'data/test.cxl'))
 
-    del valid_classes, valid_ids
-    
-    num_classes = len(list(set(train_classes + test_classes)))
+    num_classes = len(list(set(train_classes + test_classes + valid_classes)))
+
     data_train = datasets.GREC(root, train_ids, train_classes)
+    data_valid = datasets.GREC(root, valid_ids, valid_classes)
     data_test = datasets.GREC(root, test_ids, test_classes)
     
     # Define model and optimizer
@@ -112,11 +108,17 @@ def main():
 
     # Data Loader
     train_loader = torch.utils.data.DataLoader(data_train,
-                                               batch_size=args.batch_size, shuffle=True, collate_fn=datasets.utils.collate_g,
-                                               num_workers=args.prefetch, pin_memory=True)
+                                               batch_size=args.batch_size, shuffle=True,
+                                               collate_fn=datasets.utils.collate_g, num_workers=args.prefetch,
+                                               pin_memory=True)
+    valid_loader = torch.utils.data.DataLoader(data_valid,
+                                               batch_size=args.batch_size, shuffle=True,
+                                               collate_fn=datasets.utils.collate_g, num_workers=args.prefetch,
+                                               pin_memory=True)
     test_loader = torch.utils.data.DataLoader(data_test,
-                                              batch_size=args.batch_size, shuffle=False, collate_fn=datasets.utils.collate_g,
-                                              num_workers=args.prefetch, pin_memory=True)
+                                              batch_size=args.batch_size, shuffle=False,
+                                              collate_fn=datasets.utils.collate_g, num_workers=args.prefetch,
+                                              pin_memory=True)
 
     print('\tCreate model')
     model = NMP_Duvenaud(stat_dict['degrees'], [len(h_t[0]), len(list(e.values())[0])], [5, 15, 15], 30, num_classes,
@@ -140,21 +142,22 @@ def main():
 
     lr_step = (args.lr-args.lr*args.lr_decay)/(args.epochs*args.schedule[1] - args.epochs*args.schedule[0])
 
-    # optionally resume from a checkpoint
+    # get the best checkpoint if available without training
     if args.resume:
-        checkpoint_dir = '/'.join(args.resume.split('/')[:-1])
+        checkpoint_dir = args.resume
+        best_model_file = os.path.join(checkpoint_dir, 'model_best.pth.tar')
         if not os.path.isdir(checkpoint_dir):
             os.makedirs(checkpoint_dir)
-        if os.path.isfile(args.resume):
-            print("=> loading checkpoint '{}'".format(args.resume))
-            checkpoint = torch.load(args.resume)
+        if os.path.isfile(best_model_file):
+            print("=> loading best model '{}'".format(best_model_file))
+            checkpoint = torch.load(best_model_file)
             args.start_epoch = checkpoint['epoch']
             best_acc1 = checkpoint['best_acc1']
             model.load_state_dict(checkpoint['state_dict'])
             optimizer.load_state_dict(checkpoint['optimizer'])
-            print("=> loaded checkpoint '{}' (epoch {})" .format(args.resume, checkpoint['epoch']))
+            print("=> loaded best model '{}' (epoch {})".format(best_model_file, checkpoint['epoch']))
         else:
-            print("=> no checkpoint found at '{}'".format(args.resume))
+            print("=> no best model found at '{}'".format(best_model_file))
 
     # Epoch for loop
     for epoch in range(0, args.epochs):
@@ -168,15 +171,35 @@ def main():
         train(train_loader, model, criterion, optimizer, epoch, evaluation, logger)
 
         # evaluate on test set
-        acc1 = validate(test_loader, model, criterion, evaluation, logger)
+        acc1 = validate(valid_loader, model, criterion, evaluation, logger)
 
         is_best = acc1 > best_acc1
         best_acc1 = max(acc1, best_acc1)
         utils.save_checkpoint({'epoch': epoch + 1, 'state_dict': model.state_dict(), 'best_acc1': best_acc1,
-                               'optimizer': optimizer.state_dict(), }, is_best=is_best, filename=args.resume)
+                               'optimizer': optimizer.state_dict(), }, is_best=is_best, directory=args.resume)
 
         # Logger step
         logger.log_value('learning_rate', args.lr).step()
+
+    # get the best checkpoint and test it with test set
+    if args.resume:
+        checkpoint_dir = args.resume
+        best_model_file = os.path.join(checkpoint_dir, 'model_best.pth.tar')
+        if not os.path.isdir(checkpoint_dir):
+            os.makedirs(checkpoint_dir)
+        if os.path.isfile(best_model_file):
+            print("=> loading best model '{}'".format(best_model_file))
+            checkpoint = torch.load(best_model_file)
+            args.start_epoch = checkpoint['epoch']
+            best_acc1 = checkpoint['best_acc1']
+            model.load_state_dict(checkpoint['state_dict'])
+            optimizer.load_state_dict(checkpoint['optimizer'])
+            print("=> loaded best model '{}' (epoch {})".format(best_model_file, checkpoint['epoch']))
+        else:
+            print("=> no best model found at '{}'".format(best_model_file))
+
+    # For testing
+    validate(test_loader, model, criterion, evaluation)
 
 
 def train(train_loader, model, criterion, optimizer, epoch, evaluation, logger):
@@ -237,15 +260,13 @@ def train(train_loader, model, criterion, optimizer, epoch, evaluation, logger):
     logger.log_value('train_epoch_accuracy', accuracies.avg)
 
 
-def validate(val_loader, model, criterion, evaluation, logger):
-    batch_time = AverageMeter()
+def validate(val_loader, model, criterion, evaluation, logger=None):
     losses = AverageMeter()
     accuracies = AverageMeter()
 
     # switch to evaluate mode
     model.eval()
 
-    end = time.time()
     for i, (g, h, e, target) in enumerate(val_loader):
 
         # Prepare input data
@@ -261,15 +282,12 @@ def validate(val_loader, model, criterion, evaluation, logger):
         acc = Variable(evaluation(output.data, target, topk=(1,))[0])
         accuracies.update(acc.data[0])
 
-        # measure elapsed time
-        batch_time.update(time.time() - end)
-        end = time.time()
-
     print(' * Average Accuracy {acc.avg:.3f}; Average Loss {loss.avg:.3f}'
           .format(acc=accuracies, loss=losses))
-          
-    logger.log_value('test_epoch_loss', losses.avg)
-    logger.log_value('test_epoch_accuracy', accuracies.avg)
+
+    if logger is not None:
+        logger.log_value('test_epoch_loss', losses.avg)
+        logger.log_value('test_epoch_accuracy', accuracies.avg)
 
     return accuracies.avg
     

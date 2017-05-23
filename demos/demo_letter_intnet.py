@@ -95,15 +95,11 @@ def main():
     train_classes, train_ids = read_cxl(os.path.join(root, subset, 'train.cxl'))
     test_classes, test_ids = read_cxl(os.path.join(root, subset, 'test.cxl'))
     valid_classes, valid_ids = read_cxl(os.path.join(root, subset, 'validation.cxl'))
-    
-    train_classes = train_classes + valid_classes
-    train_ids = train_ids + valid_ids
-
-    del valid_classes, valid_ids
 
     class_list = list(set(train_classes + test_classes))
     num_classes = len(class_list)
     data_train = datasets.LETTER(root, subset, train_ids, train_classes, class_list)
+    data_valid = datasets.LETTER(root, subset, valid_ids, valid_classes, class_list)
     data_test = datasets.LETTER(root, subset, test_ids, test_classes, class_list)
     
     # Define model and optimizer
@@ -123,6 +119,10 @@ def main():
     train_loader = torch.utils.data.DataLoader(data_train,
                                                batch_size=args.batch_size, shuffle=True, collate_fn=datasets.utils.collate_g,
                                                num_workers=args.prefetch, pin_memory=True)
+    valid_loader = torch.utils.data.DataLoader(data_valid,
+                                              batch_size=args.batch_size, shuffle=False,
+                                              collate_fn=datasets.utils.collate_g,
+                                              num_workers=args.prefetch, pin_memory=True)
     test_loader = torch.utils.data.DataLoader(data_test,
                                               batch_size=args.batch_size, shuffle=False, collate_fn=datasets.utils.collate_g,
                                               num_workers=args.prefetch, pin_memory=True)
@@ -177,7 +177,7 @@ def main():
         train(train_loader, model, criterion, optimizer, epoch, evaluation, logger)
 
         # evaluate on test set
-        acc1 = validate(test_loader, model, criterion, evaluation, logger)
+        acc1 = validate(valid_loader, model, criterion, evaluation, logger)
 
         is_best = acc1 > best_acc1
         best_acc1 = max(acc1, best_acc1)
@@ -186,6 +186,25 @@ def main():
 
         # Logger step
         logger.log_value('learning_rate', args.lr).step()
+
+    # get the best checkpoint and test it with test set
+    if args.resume:
+        checkpoint_dir = '/'.join(args.resume.split('/')[:-1])
+        if not os.path.isdir(checkpoint_dir):
+            os.makedirs(checkpoint_dir)
+        if os.path.isfile(args.resume):
+            print("=> loading checkpoint '{}'".format(args.resume))
+            checkpoint = torch.load(args.resume)
+            args.start_epoch = checkpoint['epoch']
+            best_acc1 = checkpoint['best_acc1']
+            model.load_state_dict(checkpoint['state_dict'])
+            optimizer.load_state_dict(checkpoint['optimizer'])
+            print("=> loaded checkpoint '{}' (epoch {})".format(args.resume, checkpoint['epoch']))
+        else:
+            print("=> no checkpoint found at '{}'".format(args.resume))
+
+    # For testing
+    validate(test_loader, model, criterion, evaluation)
 
 
 def train(train_loader, model, criterion, optimizer, epoch, evaluation, logger):
