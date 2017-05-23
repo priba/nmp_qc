@@ -52,7 +52,7 @@ parser.add_argument('--subSet', default='LOW', help='sub dataset')
 parser.add_argument('--logPath', default='../log/letter/intnet/', help='log path')
 parser.add_argument('--plotLr', default=False, help='allow plotting the data')
 parser.add_argument('--plotPath', default='../plot/letter/intnet/', help='plot path')
-parser.add_argument('--resume', default='../checkpoint/letter/intnet/checkpoint.pth.tar',
+parser.add_argument('--resume', default='../checkpoint/letter/intnet/',
                     help='path to latest checkpoint')
 # Optimization Options
 parser.add_argument('--batch-size', type=int, default=20, metavar='N',
@@ -182,7 +182,7 @@ def main():
         is_best = acc1 > best_acc1
         best_acc1 = max(acc1, best_acc1)
         utils.save_checkpoint({'epoch': epoch + 1, 'state_dict': model.state_dict(), 'best_acc1': best_acc1,
-                               'optimizer': optimizer.state_dict(), }, is_best=is_best, filename=args.resume)
+                               'optimizer': optimizer.state_dict(), }, is_best=is_best, directory=args.resume)
 
         # Logger step
         logger.log_value('learning_rate', args.lr).step()
@@ -285,9 +285,9 @@ def validate(val_loader, model, criterion, evaluation, logger):
         output = model(g, h, e)
 
         # Logs
-        losses.update(criterion(output, torch.squeeze(target.type(torch.cuda.LongTensor))).data[0])
+        losses.update(criterion(output, torch.squeeze(target.type(torch.cuda.LongTensor))).data[0], g.size(0))
         acc = Variable(evaluation(output.data, target, topk=(1,))[0])
-        accuracies.update(acc.data[0])
+        accuracies.update(acc.data[0], g.size(0))
 
         # measure elapsed time
         batch_time.update(time.time() - end)

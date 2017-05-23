@@ -51,7 +51,7 @@ parser.add_argument('--datasetPath', default='../data/GREC/', help='dataset path
 parser.add_argument('--logPath', default='../log/grec/mpnn/', help='log path')
 parser.add_argument('--plotLr', default=False, help='allow plotting the data')
 parser.add_argument('--plotPath', default='../plot/grec/mpnn/', help='plot path')
-parser.add_argument('--resume', default='../checkpoint/grec/mpnn/checkpoint.pth.tar',
+parser.add_argument('--resume', default='../checkpoint/grec/mpnn',
                     help='path to latest checkpoint')
 
 # Optimization Options
@@ -151,7 +151,7 @@ def main():
     # get the best checkpoint if available without training
     if args.resume:
         checkpoint_dir = args.resume
-        best_model_file = os.path.join(checkpoint_dir, 'model_best.pth.tar')
+        best_model_file = os.path.join(checkpoint_dir, 'model_best.pth')
         if not os.path.isdir(checkpoint_dir):
             os.makedirs(checkpoint_dir)
         if os.path.isfile(best_model_file):
@@ -190,7 +190,7 @@ def main():
     # get the best checkpoint and test it with test set
     if args.resume:
         checkpoint_dir = args.resume
-        best_model_file = os.path.join(checkpoint_dir, 'model_best.pth.tar')
+        best_model_file = os.path.join(checkpoint_dir, 'model_best.pth')
         if not os.path.isdir(checkpoint_dir):
             os.makedirs(checkpoint_dir)
         if os.path.isfile(best_model_file):
@@ -286,9 +286,9 @@ def validate(val_loader, model, criterion, evaluation, logger):
         output = model(g, h, e)
 
         # Logs
-        losses.update(criterion(output, torch.squeeze(target.type(torch.cuda.LongTensor))).data[0])
+        losses.update(criterion(output, torch.squeeze(target.type(torch.cuda.LongTensor))).data[0], g.size(0))
         acc = Variable(evaluation(output.data, target, topk=(1,))[0])
-        accuracies.update(acc.data[0])
+        accuracies.update(acc.data[0], g.size(0))
 
         # measure elapsed time
         batch_time.update(time.time() - end)

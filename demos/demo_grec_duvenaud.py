@@ -144,7 +144,7 @@ def main():
     # get the best checkpoint if available without training
     if args.resume:
         checkpoint_dir = args.resume
-        best_model_file = os.path.join(checkpoint_dir, 'model_best.pth.tar')
+        best_model_file = os.path.join(checkpoint_dir, 'model_best.pth')
         if not os.path.isdir(checkpoint_dir):
             os.makedirs(checkpoint_dir)
         if os.path.isfile(best_model_file):
@@ -185,7 +185,7 @@ def main():
     # get the best checkpoint and test it with test set
     if args.resume:
         checkpoint_dir = args.resume
-        best_model_file = os.path.join(checkpoint_dir, 'model_best.pth.tar')
+        best_model_file = os.path.join(checkpoint_dir, 'model_best.pth')
         if not os.path.isdir(checkpoint_dir):
             os.makedirs(checkpoint_dir)
         if os.path.isfile(best_model_file):
