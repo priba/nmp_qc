@@ -302,9 +302,10 @@ def validate(val_loader, model, criterion, evaluation, logger=None):
 
     print(' * Average Accuracy {acc.avg:.3f}; Average Loss {loss.avg:.3f}'
           .format(acc=accuracies, loss=losses))
-          
-    logger.log_value('test_epoch_loss', losses.avg)
-    logger.log_value('test_epoch_accuracy', accuracies.avg)
+
+    if logger is not None:
+        logger.log_value('test_epoch_loss', losses.avg)
+        logger.log_value('test_epoch_accuracy', accuracies.avg)
 
     return accuracies.avg
     
