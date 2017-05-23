@@ -138,7 +138,7 @@ def main():
     print('Optimizer')
     optimizer = optim.Adam(model.parameters(), lr=args.lr)
 
-    criterion = nn.CrossEntropyLoss()
+    criterion = nn.NLLLoss()
     if args.cuda:
         criterion = criterion.cuda()
 
@@ -151,8 +151,9 @@ def main():
 
     # optionally resume from a checkpoint
     if args.resume:
-        checkpoint_dir = '/'.join(args.resume.split('/')[:-1])
-        if not os.path.isdir(checkpoint_dir):
+        checkpoint_dir = args.resume
+        best_model_file = os.path.join(checkpoint_dir, 'model_best.pth')
+        if not os.path.isdir(best_model_file):
             os.makedirs(checkpoint_dir)
         if os.path.isfile(args.resume):
             print("=> loading checkpoint '{}'".format(args.resume))
@@ -161,7 +162,8 @@ def main():
             best_acc1 = checkpoint['best_acc1']
             model.load_state_dict(checkpoint['state_dict'])
             optimizer.load_state_dict(checkpoint['optimizer'])
-            print("=> loaded checkpoint '{}' (epoch {})".format(args.resume, checkpoint['epoch']))
+            print("=> loaded best model '{}' (epoch {}; accuracy {})".format(best_model_file, checkpoint['epoch'],
+                                                                             best_acc1))
         else:
             print("=> no checkpoint found at '{}'".format(args.resume))
 
@@ -189,8 +191,9 @@ def main():
 
     # get the best checkpoint and test it with test set
     if args.resume:
-        checkpoint_dir = '/'.join(args.resume.split('/')[:-1])
-        if not os.path.isdir(checkpoint_dir):
+        checkpoint_dir = args.resume
+        best_model_file = os.path.join(checkpoint_dir, 'model_best.pth')
+        if not os.path.isdir(best_model_file):
             os.makedirs(checkpoint_dir)
         if os.path.isfile(args.resume):
             print("=> loading checkpoint '{}'".format(args.resume))
@@ -199,7 +202,8 @@ def main():
             best_acc1 = checkpoint['best_acc1']
             model.load_state_dict(checkpoint['state_dict'])
             optimizer.load_state_dict(checkpoint['optimizer'])
-            print("=> loaded checkpoint '{}' (epoch {})".format(args.resume, checkpoint['epoch']))
+            print("=> loaded best model '{}' (epoch {}; accuracy {})".format(best_model_file, checkpoint['epoch'],
+                                                                             best_acc1))
         else:
             print("=> no checkpoint found at '{}'".format(args.resume))
 
@@ -251,7 +255,7 @@ def train(train_loader, model, criterion, optimizer, epoch, evaluation, logger):
         batch_time.update(time.time() - end)
         end = time.time()
 
-        if i % args.log_interval == 0:
+        if i % args.log_interval == 0 and i > 0:
             
             print('Epoch: [{0}][{1}/{2}]\t'
                   'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
@@ -263,6 +267,9 @@ def train(train_loader, model, criterion, optimizer, epoch, evaluation, logger):
                           
     logger.log_value('train_epoch_loss', losses.avg)
     logger.log_value('train_epoch_accuracy', accuracies.avg)
+
+    print('Epoch: [{0}] Average Accuracy {acc.avg:.3f}; Average Loss {loss.avg:.3f}'
+          .format(epoch, acc=accuracies, loss=losses))
 
 
 def validate(val_loader, model, criterion, evaluation, logger=None):
