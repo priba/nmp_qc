@@ -52,7 +52,7 @@ class NMP_Duvenaud(nn.Module):
 
             u_args = self.u[t].get_args()
 
-            h_t = Variable(torch.Tensor(np.zeros((h_in.size(0), h_in.size(1), u_args['out']))).type_as(h[t].data))
+            h_t = Variable(torch.zeros(h_in.size(0), h_in.size(1), u_args['out']).type_as(h[t].data))
 
             # Apply one layer pass (Message + Update)
             for v in range(0, h_in.size(1)):

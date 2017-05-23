@@ -112,12 +112,11 @@ def main():
                                                collate_fn=datasets.utils.collate_g, num_workers=args.prefetch,
                                                pin_memory=True)
     valid_loader = torch.utils.data.DataLoader(data_valid,
-                                               batch_size=args.batch_size,
-                                               collate_fn=datasets.utils.collate_g, num_workers=args.prefetch,
-                                               pin_memory=True)
+                                               batch_size=args.batch_size, collate_fn=datasets.utils.collate_g,
+                                               num_workers=args.prefetch, pin_memory=True)
     test_loader = torch.utils.data.DataLoader(data_test,
-                                              batch_size=args.batch_size,
-                                              collate_fn=datasets.utils.collate_g, num_workers=args.prefetch,
+                                              batch_size=args.batch_size, collate_fn=datasets.utils.collate_g,
+                                              num_workers=args.prefetch,
                                               pin_memory=True)
 
     print('\tCreate model')
@@ -156,6 +155,8 @@ def main():
             model.load_state_dict(checkpoint['state_dict'])
             optimizer.load_state_dict(checkpoint['optimizer'])
             print("=> loaded best model '{}' (epoch {})".format(best_model_file, checkpoint['epoch']))
+
+            validate(valid_loader, model, criterion, evaluation, logger)
         else:
             print("=> no best model found at '{}'".format(best_model_file))
 
@@ -278,9 +279,11 @@ def validate(val_loader, model, criterion, evaluation, logger=None):
         output = model(g, h, e)
 
         # Logs
-        losses.update(criterion(output, torch.squeeze(target.type(torch.cuda.LongTensor))).data[0])
+        test_loss = criterion(output, torch.squeeze(target.type(torch.cuda.LongTensor)))
         acc = Variable(evaluation(output.data, target, topk=(1,))[0])
-        accuracies.update(acc.data[0])
+
+        losses.update(test_loss.data[0], g.size(0))
+        accuracies.update(acc.data[0], g.size(0))
 
     print(' * Average Accuracy {acc.avg:.3f}; Average Loss {loss.avg:.3f}'
           .format(acc=accuracies, loss=losses))
