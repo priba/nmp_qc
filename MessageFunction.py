@@ -108,20 +108,21 @@ class MessageFunction(nn.Module):
     # Li et al. (2016), Gated Graph Neural Networks (GG-NN)
     def m_ggnn(self, h_v, h_w, e_vw, opt={}):
 
-        m = Variable(torch.Tensor(h_w.size(0), h_w.size(1), self.args['out']).type_as(h_w.data))
+        m = Variable(torch.zeros(h_w.size(0), h_w.size(1), self.args['out']).type_as(h_w.data))
 
         for w in range(h_w.size(1)):
-            for i, el in enumerate(self.args['e_label']):
-                ind = (el == e_vw[:,w,:]).type_as(self.learn_args[0][i])
+            if torch.nonzero(e_vw[:, w, :].data).size():
+                for i, el in enumerate(self.args['e_label']):
+                    ind = (el == e_vw[:,w,:]).type_as(self.learn_args[0][i])
 
-                parameter_mat = ind[..., None].expand(h_w.size(0), self.learn_args[0][i].size(0),
-                                                      self.learn_args[0][i].size(1))*\
-                                self.learn_args[0][i][None, ...].expand(h_w.size(0), self.learn_args[0][i].size(0),
-                                                                        self.learn_args[0][i].size(1))
+                    parameter_mat = self.learn_args[0][i][None, ...].expand(h_w.size(0), self.learn_args[0][i].size(0),
+                                                                            self.learn_args[0][i].size(1))
 
-                m[:, w, :] = m[:, w, :] + torch.transpose(torch.bmm(torch.transpose(parameter_mat, 1, 2),
-                                                                    torch.transpose(torch.unsqueeze(h_w[:, w, :], 1),
-                                                                                    1, 2)), 1, 2)
+                    m_w = torch.transpose(torch.bmm(torch.transpose(parameter_mat, 1, 2),
+                                                                        torch.transpose(torch.unsqueeze(h_w[:, w, :], 1),
+                                                                                        1, 2)), 1, 2)
+                    m_w = torch.squeeze(m_w)
+                    m[:,w,:] = ind.expand_as(m_w)*m_w
         return m
 
     def out_ggnn(self, size_h, size_e, args):

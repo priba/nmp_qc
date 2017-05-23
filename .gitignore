@@ -102,5 +102,7 @@ data/GREC/*
 log/*
 # plot
 plot/*
+# Trained models
+checkpoint/*
 # Pycharm
 .idea

@@ -118,7 +118,7 @@ def main():
                                               num_workers=args.prefetch, pin_memory=True)
 
     print('\tCreate model')
-    model = NMP_GGNN(stat_dict['edge_labels'], [len(h_t[0]), len(list(e.values())[0])], 25, 15, 2, len(l), type='classification')
+    model = NMP_GGNN(stat_dict['edge_labels'], [len(h_t[0]), len(list(e.values())[0])], 25, 15, 2, num_classes, type='classification')
 
     print('Check cuda')
     if args.cuda:
@@ -184,7 +184,6 @@ def train(train_loader, model, criterion, optimizer, epoch, evaluation, logger):
             # Compute output
             output = model(g, h, e)
 
-            print(target)
             train_loss = criterion(output, torch.squeeze(target.type(torch.cuda.LongTensor)))
 
             # compute gradient and do SGD step
