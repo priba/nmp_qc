@@ -271,7 +271,7 @@ def train(train_loader, model, criterion, optimizer, epoch, evaluation, logger):
     logger.log_value('train_epoch_error_ratio', error_ratio.avg)
 
 
-def validate(val_loader, model, criterion, evaluation, logger):
+def validate(val_loader, model, criterion, evaluation, logger=None):
     batch_time = AverageMeter()
     losses = AverageMeter()
     error_ratio = AverageMeter()
