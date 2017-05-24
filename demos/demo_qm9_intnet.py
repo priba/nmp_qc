@@ -309,9 +309,10 @@ def validate(val_loader, model, criterion, evaluation, logger=None):
 
     print(' * Average Error Ratio {err.avg:.3f}'
           .format(err=error_ratio))
-          
-    logger.log_value('test_epoch_loss', losses.avg)
-    logger.log_value('test_epoch_error_ratio', error_ratio.avg)
+
+    if logger is not None:
+        logger.log_value('test_epoch_loss', losses.avg)
+        logger.log_value('test_epoch_error_ratio', error_ratio.avg)
 
     
 if __name__ == '__main__':

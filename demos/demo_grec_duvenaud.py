@@ -123,9 +123,7 @@ def main():
     model = NMP_Duvenaud(stat_dict['degrees'], [len(h_t[0]), len(list(e.values())[0])], [5, 15, 15], 30, num_classes,
                          type='classification')
 
-    print('Check cuda')
-    if args.cuda:
-        model.cuda()
+
 
     print('Optimizer')
     optimizer = optim.Adam(model.parameters(), lr=args.lr)
@@ -156,9 +154,12 @@ def main():
             optimizer.load_state_dict(checkpoint['optimizer'])
             print("=> loaded best model '{}' (epoch {})".format(best_model_file, checkpoint['epoch']))
 
-            validate(valid_loader, model, criterion, evaluation, logger)
         else:
             print("=> no best model found at '{}'".format(best_model_file))
+
+    print('Check cuda')
+    if args.cuda:
+        model.cuda()
 
     # Epoch for loop
     for epoch in range(0, args.epochs):

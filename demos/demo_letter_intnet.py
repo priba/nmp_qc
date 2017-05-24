@@ -149,26 +149,29 @@ def main():
 
     lr_step = (args.lr-args.lr*args.lr_decay)/(args.epochs*args.schedule[1] - args.epochs*args.schedule[0])
 
-    # optionally resume from a checkpoint
+    # get the best checkpoint if available without training
     if args.resume:
-        checkpoint_dir = '/'.join(args.resume.split('/')[:-1])
+        checkpoint_dir = args.resume
+        best_model_file = os.path.join(checkpoint_dir, 'model_best.pth')
         if not os.path.isdir(checkpoint_dir):
             os.makedirs(checkpoint_dir)
-        if os.path.isfile(args.resume):
-            print("=> loading checkpoint '{}'".format(args.resume))
-            checkpoint = torch.load(args.resume)
+        if os.path.isfile(best_model_file):
+            print("=> loading best model '{}'".format(best_model_file))
+            checkpoint = torch.load(best_model_file)
             args.start_epoch = checkpoint['epoch']
             best_acc1 = checkpoint['best_acc1']
             model.load_state_dict(checkpoint['state_dict'])
             optimizer.load_state_dict(checkpoint['optimizer'])
-            print("=> loaded checkpoint '{}' (epoch {})".format(args.resume, checkpoint['epoch']))
+            print("=> loaded best model '{}' (epoch {})".format(best_model_file, checkpoint['epoch']))
         else:
-            print("=> no checkpoint found at '{}'".format(args.resume))
+            print("=> no best model found at '{}'".format(best_model_file))
+
+
 
     # Epoch for loop
     for epoch in range(0, args.epochs):
 
-        if epoch > args.epochs*args.schedule[0] and epoch < args.epochs*args.schedule[1]:
+        if epoch > args.epochs * args.schedule[0] and epoch < args.epochs * args.schedule[1]:
             args.lr -= lr_step
             for param_group in optimizer.param_groups:
                 param_group['lr'] = args.lr
@@ -189,19 +192,20 @@ def main():
 
     # get the best checkpoint and test it with test set
     if args.resume:
-        checkpoint_dir = '/'.join(args.resume.split('/')[:-1])
+        checkpoint_dir = args.resume
+        best_model_file = os.path.join(checkpoint_dir, 'model_best.pth')
         if not os.path.isdir(checkpoint_dir):
             os.makedirs(checkpoint_dir)
-        if os.path.isfile(args.resume):
-            print("=> loading checkpoint '{}'".format(args.resume))
-            checkpoint = torch.load(args.resume)
+        if os.path.isfile(best_model_file):
+            print("=> loading best model '{}'".format(best_model_file))
+            checkpoint = torch.load(best_model_file)
             args.start_epoch = checkpoint['epoch']
             best_acc1 = checkpoint['best_acc1']
             model.load_state_dict(checkpoint['state_dict'])
             optimizer.load_state_dict(checkpoint['optimizer'])
-            print("=> loaded checkpoint '{}' (epoch {})".format(args.resume, checkpoint['epoch']))
+            print("=> loaded best model '{}' (epoch {})".format(best_model_file, checkpoint['epoch']))
         else:
-            print("=> no checkpoint found at '{}'".format(args.resume))
+            print("=> no best model found at '{}'".format(best_model_file))
 
     # For testing
     validate(test_loader, model, criterion, evaluation)
@@ -295,9 +299,10 @@ def validate(val_loader, model, criterion, evaluation, logger=None):
 
     print(' * Average Accuracy {acc.avg:.3f}; Average Loss {loss.avg:.3f}'
           .format(acc=accuracies, loss=losses))
-          
-    logger.log_value('test_epoch_loss', losses.avg)
-    logger.log_value('test_epoch_accuracy', accuracies.avg)
+
+    if logger is not None:
+        logger.log_value('test_epoch_loss', losses.avg)
+        logger.log_value('test_epoch_accuracy', accuracies.avg)
 
     return accuracies.avg
     
