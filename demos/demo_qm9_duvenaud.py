@@ -259,7 +259,7 @@ def train(train_loader, model, criterion, optimizer, epoch, evaluation, logger):
         batch_time.update(time.time() - end)
         end = time.time()
 
-        if i % args.log_interval == 0:
+        if i % args.log_interval == 0 and i > 0:
 
             print('Epoch: [{0}][{1}/{2}]\t'
                   'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
@@ -272,6 +272,8 @@ def train(train_loader, model, criterion, optimizer, epoch, evaluation, logger):
     logger.log_value('train_epoch_loss', losses.avg)
     logger.log_value('train_epoch_error_ratio', error_ratio.avg)
 
+    print('Epoch: [{0}] Average Error Ratio {err.avg:.3f}; Average Loss {loss.avg:.3f}'
+          .format(epoch, acc=error_ratio, loss=losses))
 
 def validate(val_loader, model, criterion, evaluation, logger=None):
     batch_time = AverageMeter()
@@ -300,7 +302,7 @@ def validate(val_loader, model, criterion, evaluation, logger=None):
         batch_time.update(time.time() - end)
         end = time.time()
 
-        if i % args.log_interval == 0:
+        if i % args.log_interval == 0 and i > 0:
             
             print('Test: [{0}/{1}]\t'
                   'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
@@ -308,9 +310,8 @@ def validate(val_loader, model, criterion, evaluation, logger=None):
                   'Error Ratio {err.val:.4f} ({err.avg:.4f})'
                   .format(i, len(val_loader), batch_time=batch_time,
                           loss=losses, err=error_ratio))
-
-    print(' * Average Error Ratio {err.avg:.3f}'
-          .format(err=error_ratio))
+    print(' * Average Error Ratio {err.avg:.3f}; Average Loss {loss.avg:.3f}'
+          .format(err=error_ratio, loss=losses))
 
     if logger is not None:
         logger.log_value('test_epoch_loss', losses.avg)
