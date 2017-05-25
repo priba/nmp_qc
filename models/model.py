@@ -234,7 +234,7 @@ class NMP_MPNN(nn.Module):
 
         # Define message
         self.m = nn.ModuleList(
-            [MessageFunction('mpnn', args={'in': hidden_state_size, 'out': message_size})])
+            [MessageFunction('mpnn', args={'edge_feat': in_n[1], 'in': hidden_state_size, 'out': message_size})])
 
         # Define Update
         self.u = nn.ModuleList([UpdateFunction('mpnn',

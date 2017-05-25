@@ -94,12 +94,7 @@ def main():
     train_classes, train_ids = read_cxl(os.path.join(root, 'data/train.cxl'))
     test_classes, test_ids = read_cxl(os.path.join(root, 'data/test.cxl'))
     valid_classes, valid_ids = read_cxl(os.path.join(root, 'data/valid.cxl'))
-    
-    train_classes = train_classes + valid_classes
-    train_ids = train_ids + valid_ids
 
-    del valid_classes, valid_ids
-    
     num_classes = len(list(set(train_classes + test_classes)))
 
     data_train = datasets.GREC(root, train_ids, train_classes)
@@ -111,10 +106,6 @@ def main():
     # Select one graph
     g_tuple, l = data_train[0]
     g, h_t, e = g_tuple
-
-    print('\tStatistics')
-    stat_dict = {}
-    stat_dict = datasets.utils.get_graph_stats(data_train, ['edge_labels'])
 
     # Data Loader
     train_loader = torch.utils.data.DataLoader(data_train,
@@ -130,16 +121,10 @@ def main():
     print('\tCreate model')
     model = NMP_MPNN([len(h_t[0]), len(list(e.values())[0])], 25, 15, 2, num_classes, type='classification')
 
-    print('Check cuda')
-    if args.cuda:
-        model.cuda()
-
     print('Optimizer')
     optimizer = optim.Adam(model.parameters(), lr=args.lr)
 
     criterion = nn.NLLLoss()
-    if args.cuda:
-        criterion = criterion.cuda()
 
     evaluation = utils.accuracy
 
@@ -165,6 +150,12 @@ def main():
                                                                              best_acc1))
         else:
             print("=> no best model found at '{}'".format(best_model_file))
+
+    print('Check cuda')
+    if args.cuda:
+        print('\t* Cuda')
+        model.cuda()
+        criterion = criterion.cuda()
 
     # Epoch for loop
     for epoch in range(0, args.epochs):
@@ -223,6 +214,7 @@ def train(train_loader, model, criterion, optimizer, epoch, evaluation, logger):
     for i, (g, h, e, target) in enumerate(train_loader):
         
         # Prepare input data
+        target = torch.squeeze(target).type(torch.LongTensor)
         if args.cuda:
             g, h, e, target = g.cuda(), h.cuda(), e.cuda(), target.cuda()
         g, h, e, target = Variable(g), Variable(h), Variable(e), Variable(target)
@@ -235,7 +227,7 @@ def train(train_loader, model, criterion, optimizer, epoch, evaluation, logger):
 
             # Compute output
             output = model(g, h, e)
-            train_loss = criterion(output, torch.squeeze(target.type(torch.cuda.LongTensor)))
+            train_loss = criterion(output, target)
             # compute gradient and do SGD step
             train_loss.backward()
             return train_loss
@@ -243,8 +235,8 @@ def train(train_loader, model, criterion, optimizer, epoch, evaluation, logger):
         optimizer.step(closure)
 
         output = model(g, h, e)
-        train_loss = criterion(output, torch.squeeze(target.type(torch.cuda.LongTensor)))
-        acc = Variable(evaluation(output.data, target, topk=(1,))[0])
+        train_loss = criterion(output, target)
+        acc = Variable(evaluation(output.data, target.data, topk=(1,))[0])
 
         # Logs
         losses.update(train_loss.data[0], g.size(0))
@@ -267,8 +259,8 @@ def train(train_loader, model, criterion, optimizer, epoch, evaluation, logger):
     logger.log_value('train_epoch_loss', losses.avg)
     logger.log_value('train_epoch_accuracy', accuracies.avg)
 
-    print('Epoch: [{0}] Average Accuracy {acc.avg:.3f}; Average Loss {loss.avg:.3f}'
-          .format(epoch, acc=accuracies, loss=losses))
+    print('Epoch: [{0}] Average Accuracy {acc.avg:.3f}; Average Loss {loss.avg:.3f}; Average Time per Batch {b_time.avg:.3f}'
+          .format(epoch, acc=accuracies, loss=losses, b_time=batch_time))
 
 
 def validate(val_loader, model, criterion, evaluation, logger=None):
@@ -283,6 +275,7 @@ def validate(val_loader, model, criterion, evaluation, logger=None):
     for i, (g, h, e, target) in enumerate(val_loader):
 
         # Prepare input data
+        target = torch.squeeze(target).type(torch.LongTensor)
         if args.cuda:
             g, h, e, target = g.cuda(), h.cuda(), e.cuda(), target.cuda()
         g, h, e, target = Variable(g), Variable(h), Variable(e), Variable(target)
@@ -291,8 +284,8 @@ def validate(val_loader, model, criterion, evaluation, logger=None):
         output = model(g, h, e)
 
         # Logs
-        losses.update(criterion(output, torch.squeeze(target.type(torch.cuda.LongTensor))).data[0], g.size(0))
-        acc = Variable(evaluation(output.data, target, topk=(1,))[0])
+        losses.update(criterion(output, target).data[0], g.size(0))
+        acc = Variable(evaluation(output.data, target.data, topk=(1,))[0])
         accuracies.update(acc.data[0], g.size(0))
 
         # measure elapsed time

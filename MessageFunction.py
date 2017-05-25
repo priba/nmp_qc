@@ -168,18 +168,14 @@ class MessageFunction(nn.Module):
     # Gilmer et al. (2017), Neural Message Passing for Quantum Chemistry
     def m_mpnn(self, h_v, h_w, e_vw, opt={}):
 
-        m = h_v[:, None, :].expand_as(h_w)
-        b_size = m.size()
-        m = m.contiguous().view(-1, b_size[2])
-        m = self.learn_modules[0](m)
-        m = m.view(b_size[0], b_size[1], self.args['out'], self.args['in'])
-
-        h_new = Variable(torch.Tensor(h_w.size(0), h_w.size(1), self.args['out']).type_as(h_w.data))
+        m_new = Variable(torch.Tensor(h_w.size(0), h_w.size(1), self.args['out']).type_as(h_w.data))
         for w in range(h_w.size(1)):
-            h_new[:, w, :] = torch.transpose(torch.bmm(m[:, w, :, :],
+            a_e = self.learn_modules[0]( e_vw[:,w,:])
+            a_e = a_e.view(h_w.size(0), self.args['out'], self.args['in'])
+            m_new[:, w, :] = torch.transpose(torch.bmm(a_e,
                                       torch.transpose(torch.unsqueeze(h_w[:, w, :], 1), 1, 2)), 1, 2).clone()
 
-        return h_new
+        return m_new
 
     def out_mpnn(self, size_h, size_e, args):
         return self.args['out']
@@ -193,7 +189,7 @@ class MessageFunction(nn.Module):
         args['out'] = params['out']
 
         # Define a parameter matrix A for each edge label.
-        learn_modules.append(NNetM(n_in=params['in'], n_out=(params['in'], params['out'])))
+        learn_modules.append(NNetM(n_in=params['edge_feat'], n_out=(params['in'], params['out'])))
 
         return nn.ParameterList(learn_args), nn.ModuleList(learn_modules), args
 

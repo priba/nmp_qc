@@ -139,8 +139,9 @@ def accuracy(output, target, topk=(1,)):
     batch_size = target.size(0)
     _, pred = output.topk(maxk, 1, True, True)
     pred = pred.t()
-    pred = pred.type(torch.cuda.FloatTensor)
-    correct = pred.eq(target.view(1, -1).expand_as(pred).data)
+    pred = pred.type_as(target)
+    target = target.type_as(pred)
+    correct = pred.eq(target.view(1, -1).expand_as(pred))
     res = []
     for k in topk:
         correct_k = correct[:k].view(-1).float().sum(0)

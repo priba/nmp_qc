@@ -59,7 +59,7 @@ parser.add_argument('--resume', default='../checkpoint/letter/ggnn/',
 # Optimization Options
 parser.add_argument('--batch-size', type=int, default=20, metavar='N',
                     help='Input batch size for training (default: 20)')
-parser.add_argument('--no-cuda', action='store_true', default=False,
+parser.add_argument('--no-cuda', action='store_true', default=True,
                     help='Enables CUDA training')
 parser.add_argument('--epochs', type=int, default=360, metavar='N',
                     help='Number of epochs to train (default: 360)')
@@ -132,17 +132,10 @@ def main():
     print('\tCreate model')
     model = NMP_GGNN(stat_dict['edge_labels'], [len(h_t[0]), len(list(e.values())[0])], 25, 15, 2, num_classes, type='classification')
 
-    print('Check cuda')
-    if args.cuda:
-        print('\tCuda')
-        model.cuda()
-
     print('Optimizer')
     optimizer = optim.Adam(model.parameters(), lr=args.lr)
 
     criterion = nn.NLLLoss()
-    if args.cuda:
-        criterion = criterion.cuda()
 
     evaluation = utils.accuracy
 
@@ -168,6 +161,12 @@ def main():
                                                                              best_acc1))
         else:
             print("=> no best model found at '{}'".format(best_model_file))
+
+    print('Check cuda')
+    if args.cuda:
+        print('\t* Cuda')
+        model.cuda()
+        criterion = criterion.cuda()
 
     # Epoch for loop
     for epoch in range(0, args.epochs):
@@ -226,6 +225,7 @@ def train(train_loader, model, criterion, optimizer, epoch, evaluation, logger):
     for i, (g, h, e, target) in enumerate(train_loader):
         
         # Prepare input data
+        target = torch.squeeze(target).type(torch.LongTensor)
         if args.cuda:
             g, h, e, target = g.cuda(), h.cuda(), e.cuda(), target.cuda()
         g, h, e, target = Variable(g), Variable(h), Variable(e), Variable(target)
@@ -238,7 +238,7 @@ def train(train_loader, model, criterion, optimizer, epoch, evaluation, logger):
 
             # Compute output
             output = model(g, h, e)
-            train_loss = criterion(output, torch.squeeze(target.type(torch.cuda.LongTensor)))
+            train_loss = criterion(output, target)
             # compute gradient and do SGD step
             train_loss.backward()
             return train_loss
@@ -246,8 +246,8 @@ def train(train_loader, model, criterion, optimizer, epoch, evaluation, logger):
         optimizer.step(closure)
 
         output = model(g, h, e)
-        train_loss = criterion(output, torch.squeeze(target.type(torch.cuda.LongTensor)))
-        acc = Variable(evaluation(output.data, target, topk=(1,))[0])
+        train_loss = criterion(output, target)
+        acc = Variable(evaluation(output.data, target.data, topk=(1,))[0])
 
         # Logs
         losses.update(train_loss.data[0], g.size(0))
@@ -270,8 +270,8 @@ def train(train_loader, model, criterion, optimizer, epoch, evaluation, logger):
     logger.log_value('train_epoch_loss', losses.avg)
     logger.log_value('train_epoch_accuracy', accuracies.avg)
 
-    print('Epoch: [{0}] Average Accuracy {acc.avg:.3f}; Average Loss {loss.avg:.3f}'
-          .format(epoch, acc=accuracies, loss=losses))
+    print('Epoch: [{0}] Average Accuracy {acc.avg:.3f}; Average Loss {loss.avg:.3f}; Average Time per Batch {b_time.avg:.3f}'
+          .format(epoch, acc=accuracies, loss=losses, b_time=batch_time))
 
 
 def validate(val_loader, model, criterion, evaluation, logger=None):
@@ -286,6 +286,7 @@ def validate(val_loader, model, criterion, evaluation, logger=None):
     for i, (g, h, e, target) in enumerate(val_loader):
 
         # Prepare input data
+        target = torch.squeeze(target).type(torch.LongTensor)
         if args.cuda:
             g, h, e, target = g.cuda(), h.cuda(), e.cuda(), target.cuda()
         g, h, e, target = Variable(g), Variable(h), Variable(e), Variable(target)
@@ -294,8 +295,9 @@ def validate(val_loader, model, criterion, evaluation, logger=None):
         output = model(g, h, e)
 
         # Logs
-        losses.update(criterion(output, torch.squeeze(target.type(torch.cuda.LongTensor))).data[0], g.size(0))
-        acc = Variable(evaluation(output.data, target, topk=(1,))[0])
+        losses.update(criterion(output, target).data[0], g.size(0))
+
+        acc = Variable(evaluation(output.data, target.data, topk=(1,))[0])
         accuracies.update(acc.data[0], g.size(0))
 
         # measure elapsed time
