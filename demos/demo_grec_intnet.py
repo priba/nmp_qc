@@ -94,12 +94,7 @@ def main():
     test_classes, test_ids = read_cxl(os.path.join(root, 'data/test.cxl'))
     valid_classes, valid_ids = read_cxl(os.path.join(root, 'data/valid.cxl'))
     
-    train_classes = train_classes + valid_classes
-    train_ids = train_ids + valid_ids
-
-    del valid_classes, valid_ids
-    
-    num_classes = len(list(set(train_classes + test_classes)))
+    num_classes = len(list(set(train_classes + test_classes + valid_classes)))
 
     data_train = datasets.GREC(root, train_ids, train_classes)
     data_valid = datasets.GREC(root, valid_ids, valid_classes)
