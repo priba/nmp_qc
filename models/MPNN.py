@@ -48,7 +48,7 @@ class MPNN(nn.Module):
 
         # Padding to some larger dimension d
         h_t = torch.cat([h_in, Variable(
-            torch.Tensor(h_in.size(0), h_in.size(1), self.args['out'] - h_in.size(2)).type_as(h_in.data).zero_())], 2)
+            torch.zeros(h_in.size(0), h_in.size(1), self.args['out'] - h_in.size(2)).type_as(h_in.data))], 2)
 
         h.append(h_t.clone())
 

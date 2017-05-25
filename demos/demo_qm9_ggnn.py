@@ -68,7 +68,7 @@ parser.add_argument('--schedule', type=list, default=[0.1, 0.9], metavar='S',
 parser.add_argument('--momentum', type=float, default=0.9, metavar='M',
                     help='SGD momentum (default: 0.9)')
 # i/o
-parser.add_argument('--log-interval', type=int, default=7, metavar='N',
+parser.add_argument('--log-interval', type=int, default=20, metavar='N',
                     help='How many batches to wait before logging training status')
 # Accelerating
 parser.add_argument('--prefetch', type=int, default=2, help='Pre-fetching threads.')
@@ -143,11 +143,6 @@ def main():
     print('\tCreate model')
     model = MpnnGGNN(stat_dict['edge_labels'], [len(h_t[0]), len(list(e.values())[0])], 25, 15, 2, len(l),
                      type='regression')
-
-    print('Check cuda')
-    if args.cuda:
-        print('\tCuda available')
-        model.cuda()
 
     print('Optimizer')
     optimizer = optim.Adam(model.parameters(), lr=args.lr)

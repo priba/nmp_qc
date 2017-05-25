@@ -53,7 +53,7 @@ class MpnnGGNN(nn.Module):
         # Layer
         for t in range(0, self.n_layers):
 
-            h_t = Variable(torch.Tensor(h[0].size(0), h[0].size(1), h[0].size(2)).type_as(h_in.data).zero_())
+            h_t = Variable(torch.zeros(h[0].size(0), h[0].size(1), h[0].size(2)).type_as(h_in.data))
 
             # Apply one layer pass (Message + Update)
             for v in range(0, h_in.size(1)):
