@@ -12,7 +12,7 @@ from __future__ import print_function
 
 # Own modules
 import datasets
-from models.nnet import NNet, NNetM
+from models.nnet import NNet
 
 import numpy as np
 import os
@@ -192,7 +192,7 @@ class MessageFunction(nn.Module):
         args['out'] = params['out']
 
         # Define a parameter matrix A for each edge label.
-        learn_modules.append(NNetM(n_in=params['edge_feat'], n_out=(params['in'], params['out'])))
+        learn_modules.append(NNet(n_in=params['edge_feat'], n_out=(params['in']*params['out'])))
 
         return nn.ParameterList(learn_args), nn.ModuleList(learn_modules), args
 
