@@ -28,7 +28,7 @@ if reader_folder not in sys.path:
     sys.path.append(reader_folder)
 import datasets
 from datasets import utils
-from models.MPNN_IntNet import MPNN_IntNet
+from models.MPNN_IntNet import MpnnIntNet
 from LogMetric import AverageMeter, Logger
 
 __author__ = "Pau Riba, Anjan Dutta"
@@ -141,12 +141,7 @@ def main():
                                               num_workers=args.prefetch, pin_memory=True)
 
     print('\tCreate model')
-    model = NMP_IntNet([len(h_t[0]), len(list(e.values())[0])], [5, 15, 15], [10, 20, 20], len(l), type='regression')
-
-    print('Check cuda')
-    if args.cuda:
-        print('\tCuda available')
-        model.cuda()
+    model = MpnnIntNet([len(h_t[0]), len(list(e.values())[0])], [5, 15, 15], [10, 20, 20], len(l), type='regression')
 
     print('Optimizer')
     optimizer = optim.Adam(model.parameters(), lr=args.lr)
@@ -175,6 +170,12 @@ def main():
             print("=> loaded best model '{}' (epoch {})".format(best_model_file, checkpoint['epoch']))
         else:
             print("=> no best model found at '{}'".format(best_model_file))
+
+    print('Check cuda')
+    if args.cuda:
+        print('\t* Cuda')
+        model.cuda()
+        criterion = criterion.cuda()
 
     # Epoch for loop
     for epoch in range(0, args.epochs):

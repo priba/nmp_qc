@@ -151,6 +151,7 @@ def main():
 
     print('Optimizer')
     optimizer = optim.Adam(model.parameters(), lr=args.lr)
+
     criterion = nn.MSELoss()
     # evaluation = nn.L1Loss()
     evaluation = lambda output, target: torch.mean(torch.abs(output - target) / torch.abs(target))
@@ -176,6 +177,12 @@ def main():
             print("=> loaded best model '{}' (epoch {})".format(best_model_file, checkpoint['epoch']))
         else:
             print("=> no best model found at '{}'".format(best_model_file))
+
+    print('Check cuda')
+    if args.cuda:
+        print('\t* Cuda')
+        model.cuda()
+        criterion = criterion.cuda()
 
     # Epoch for loop
     for epoch in range(0, args.epochs):

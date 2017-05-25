@@ -120,15 +120,11 @@ def main():
     model = MpnnDuvenaud(stat_dict['degrees'], [len(h_t[0]), len(list(e.values())[0])], [5, 15, 15], 30, num_classes, type='classification')
 
     print('Check cuda')
-    if args.cuda:
-        model.cuda()
 
     print('Optimizer')
     optimizer = optim.Adam(model.parameters(), lr=args.lr)
 
     criterion = nn.NLLLoss()
-    if args.cuda:
-        criterion = criterion.cuda()
 
     evaluation = utils.accuracy
 
@@ -154,6 +150,12 @@ def main():
                                                                              best_acc1))
         else:
             print("=> no best model found at '{}'".format(best_model_file))
+
+    print('Check cuda')
+    if args.cuda:
+        print('\t* Cuda')
+        model.cuda()
+        criterion = criterion.cuda()
 
     # Epoch for loop
     for epoch in range(0, args.epochs):
