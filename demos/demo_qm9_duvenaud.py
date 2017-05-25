@@ -274,8 +274,9 @@ def train(train_loader, model, criterion, optimizer, epoch, evaluation, logger):
     logger.log_value('train_epoch_loss', losses.avg)
     logger.log_value('train_epoch_error_ratio', error_ratio.avg)
 
-    print('Epoch: [{0}] Average Error Ratio {err.avg:.3f}; Average Loss {loss.avg:.3f}'
-          .format(epoch, acc=error_ratio, loss=losses))
+    print('Epoch: [{0}] Avg Error Ratio {err.avg:.3f}; Average Loss {loss.avg:.3f}; Avg Time x Batch {b_time.avg:.3f}'
+          .format(epoch, acc=error_ratio, loss=losses, b_time=batch_time))
+
 
 def validate(val_loader, model, criterion, evaluation, logger=None):
     batch_time = AverageMeter()
@@ -312,6 +313,7 @@ def validate(val_loader, model, criterion, evaluation, logger=None):
                   'Error Ratio {err.val:.4f} ({err.avg:.4f})'
                   .format(i, len(val_loader), batch_time=batch_time,
                           loss=losses, err=error_ratio))
+
     print(' * Average Error Ratio {err.avg:.3f}; Average Loss {loss.avg:.3f}'
           .format(err=error_ratio, loss=losses))
 

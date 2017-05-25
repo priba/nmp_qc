@@ -239,19 +239,17 @@ def train(train_loader, model, criterion, optimizer, epoch, evaluation, logger):
             # Compute output
             output = model(g, h, e)
             train_loss = criterion(output, target)
+
+            acc = Variable(evaluation(output.data, target.data, topk=(1,))[0])
+
+            # Logs
+            losses.update(train_loss.data[0], g.size(0))
+            accuracies.update(acc.data[0], g.size(0))
             # compute gradient and do SGD step
             train_loss.backward()
             return train_loss
 
         optimizer.step(closure)
-
-        output = model(g, h, e)
-        train_loss = criterion(output, target)
-        acc = Variable(evaluation(output.data, target.data, topk=(1,))[0])
-
-        # Logs
-        losses.update(train_loss.data[0], g.size(0))
-        accuracies.update(acc.data[0], g.size(0))
 
         # Measure elapsed time
         batch_time.update(time.time() - end)
@@ -270,7 +268,7 @@ def train(train_loader, model, criterion, optimizer, epoch, evaluation, logger):
     logger.log_value('train_epoch_loss', losses.avg)
     logger.log_value('train_epoch_accuracy', accuracies.avg)
 
-    print('Epoch: [{0}] Average Accuracy {acc.avg:.3f}; Average Loss {loss.avg:.3f}; Average Time per Batch {b_time.avg:.3f}'
+    print('Epoch: [{0}] Average Accuracy {acc.avg:.3f}; Average Loss {loss.avg:.3f}; Avg Time x Batch {b_time.avg:.3f}'
           .format(epoch, acc=accuracies, loss=losses, b_time=batch_time))
 
 
@@ -295,14 +293,11 @@ def validate(val_loader, model, criterion, evaluation, logger=None):
         output = model(g, h, e)
 
         # Logs
-        losses.update(criterion(output, target).data[0], g.size(0))
-
+        test_loss = criterion(output, target)
         acc = Variable(evaluation(output.data, target.data, topk=(1,))[0])
-        accuracies.update(acc.data[0], g.size(0))
 
-        # measure elapsed time
-        batch_time.update(time.time() - end)
-        end = time.time()
+        losses.update(test_loss.data[0], g.size(0))
+        accuracies.update(acc.data[0], g.size(0))
 
     print(' * Average Accuracy {acc.avg:.3f}; Average Loss {loss.avg:.3f}'
           .format(acc=accuracies, loss=losses))
