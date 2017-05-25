@@ -26,7 +26,7 @@ if reader_folder not in sys.path:
     sys.path.append(reader_folder)
 import datasets
 from datasets import utils
-from models.model import NMP_MPNN
+from models.MPNN import MPNN
 from LogMetric import AverageMeter, Logger
 from GraphReader.graph_reader import read_cxl
 
@@ -119,7 +119,7 @@ def main():
                                               num_workers=args.prefetch, pin_memory=True)
 
     print('\tCreate model')
-    model = NMP_MPNN([len(h_t[0]), len(list(e.values())[0])], 25, 15, 2, num_classes, type='classification')
+    model = MPNN([len(h_t[0]), len(list(e.values())[0])], 25, 15, 2, num_classes, type='classification')
 
     print('Optimizer')
     optimizer = optim.Adam(model.parameters(), lr=args.lr)

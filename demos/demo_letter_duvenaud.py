@@ -26,7 +26,7 @@ if reader_folder not in sys.path:
     sys.path.append(reader_folder)
 import datasets
 from datasets import utils
-from models.model import NMP_Duvenaud
+from models.MPNN_Duvenaud import MpnnDuvenaud
 from LogMetric import AverageMeter, Logger
 from GraphReader.graph_reader import read_cxl
 from visualization.Plotter import Plotter
@@ -125,7 +125,7 @@ def main():
                                               num_workers=args.prefetch, pin_memory=True)
 
     print('\tCreate model')
-    model = NMP_Duvenaud(stat_dict['degrees'], [len(h_t[0]), len(list(e.values())[0])], [5, 15, 15], 30, num_classes,
+    model = MpnnDuvenaud(stat_dict['degrees'], [len(h_t[0]), len(list(e.values())[0])], [5, 15, 15], 30, num_classes,
                          type='classification')
 
     print('Check cuda')

@@ -28,7 +28,7 @@ if reader_folder not in sys.path:
     sys.path.append(reader_folder)
 import datasets
 from datasets import utils
-from models.model import NMP_IntNet
+from models.MPNN_IntNet import MPNN_IntNet
 from LogMetric import AverageMeter, Logger
 
 __author__ = "Pau Riba, Anjan Dutta"

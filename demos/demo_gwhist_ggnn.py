@@ -26,7 +26,7 @@ if reader_folder not in sys.path:
     sys.path.append(reader_folder)
 import datasets
 from datasets import utils
-from models.model import NMP_GGNN
+from models.MPNN_GGNN import MpnnGGNN
 from LogMetric import AverageMeter, Logger
 from GraphReader.graph_reader import read_2cols_set_files, create_numeric_classes
 
@@ -129,7 +129,7 @@ def main():
                                               num_workers=args.prefetch, pin_memory=True)
 
     print('\tCreate model')
-    model = NMP_GGNN(stat_dict['edge_labels'], [len(h_t[0]), len(list(e.values())[0])], 25, 15, 2, num_classes, type='classification')
+    model = MpnnGGNN(stat_dict['edge_labels'], [len(h_t[0]), len(list(e.values())[0])], 25, 15, 2, num_classes, type='classification')
 
     print('Check cuda')
     if args.cuda:
