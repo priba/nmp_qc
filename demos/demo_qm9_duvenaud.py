@@ -177,7 +177,7 @@ def main():
     print('Check cuda')
     if args.cuda:
         print('\t* Cuda')
-        model.cuda()
+        model = model.cuda()
         criterion = criterion.cuda()
 
     # Epoch for loop

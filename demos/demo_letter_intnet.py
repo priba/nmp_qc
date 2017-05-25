@@ -164,7 +164,7 @@ def main():
     print('Check cuda')
     if args.cuda:
         print('\t* Cuda')
-        model.cuda()
+        model = model.cuda()
         criterion = criterion.cuda()
 
     # Epoch for loop
@@ -272,7 +272,6 @@ def train(train_loader, model, criterion, optimizer, epoch, evaluation, logger):
 
 
 def validate(val_loader, model, criterion, evaluation, logger=None):
-    batch_time = AverageMeter()
     losses = AverageMeter()
     accuracies = AverageMeter()
 
