@@ -141,7 +141,7 @@ def main():
                                               num_workers=args.prefetch, pin_memory=True)
 
     print('\tCreate model')
-    model = MPNN([len(h_t[0]), len(list(e.values())[0])], 25, 15, 2, len(l), type='regression')
+    model = MPNN([len(h_t[0]), len(list(e.values())[0])], 73, 15, 2, len(l), type='regression')
 
     print('Optimizer')
     optimizer = optim.Adam(model.parameters(), lr=args.lr)
