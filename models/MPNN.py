@@ -55,9 +55,12 @@ class MPNN(nn.Module):
         # Layer
         for t in range(0, self.n_layers):
 
-            h_t = Variable(torch.Tensor(h[0].size(0), h[0].size(1), h[0].size(2)).type_as(h_in.data).zero_())
+            h_comp = Variable(torch.zeros(h[0].size(0), h[0].size(1), h[0].size(2)).type_as(h_in.data))
 
-            e_aux = e.view(-1, e.size(2), e.size(3))
+            # e_aux[0:27,:,:] == e[0,0:27,:,:]
+            e_aux = e.view(-1, e.size(3))
+
+            # h_aux[0:27, :] == h[t][0, :, :]
             h_aux = h[t].view(-1, h[t].size(2))
 
             m = self.m[0].forward(h[t], h_aux, e_aux)
@@ -66,21 +69,21 @@ class MPNN(nn.Module):
             # Nodes without edge set message to 0
             m = torch.unsqueeze(g, 3).expand_as(m) * m
 
-            m = torch.squeeze(torch.sum(m, 2))
+            m = torch.squeeze(torch.sum(m, 1))
 
             h_t = self.u[0].forward(h[t], m)
 
             # Apply one layer pass (Message + Update)
-            # for v in range(0, h_in.size(1)):
-            #     m = self.m[0].forward(h[t][:, v, :], h[t], e[:, v, :])
-            #
-            #     # Nodes without edge set message to 0
-            #     m = g[:, v, :, None].expand_as(m) * m
-            #
-            #     m = torch.sum(m, 1)
-            #
-            #     # Update
-            #     h_t[:, v, :] = self.u[0].forward(h[t][:, v, :], m)
+            for v in range(0, h_in.size(1)):
+                m_comp = self.m[0].m_mpnn1(h[t][:, v, :], h[t], e[:, v, :])
+
+                # Nodes without edge set message to 0
+                m_comp = g[:, v, :, None].expand_as(m_comp) * m_comp
+
+                m_comp = torch.sum(m_comp, 1)
+
+                # Update
+                h_comp[:, v, :] = self.u[0].u_mpnn1(h[t][:, v, :], m_comp)
 
             # Delete virtual nodes
             h_t = (torch.sum(h_in, 2).expand_as(h_t) > 0).type_as(h_t) * h_t
