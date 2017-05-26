@@ -116,16 +116,15 @@ def main():
 
 
     # Data Loader
-    train_loader = torch.utils.data.DataLoader(data_train,
-                                               batch_size=args.batch_size, shuffle=True, collate_fn=datasets.utils.collate_g,
-                                               num_workers=args.prefetch, pin_memory=True)
-    valid_loader = torch.utils.data.DataLoader(data_valid,
-                                              batch_size=args.batch_size, shuffle=False,
-                                              collate_fn=datasets.utils.collate_g,
-                                              num_workers=args.prefetch, pin_memory=True)
-    test_loader = torch.utils.data.DataLoader(data_test,
-                                              batch_size=args.batch_size, shuffle=False, collate_fn=datasets.utils.collate_g,
-                                              num_workers=args.prefetch, pin_memory=True)
+    train_loader = torch.utils.data.DataLoader(data_train, batch_size=args.batch_size, shuffle=True,
+                                               collate_fn=datasets.utils.collate_g, num_workers=args.prefetch,
+                                               pin_memory=True)
+    valid_loader = torch.utils.data.DataLoader(data_valid, batch_size=args.batch_size,
+                                               collate_fn=datasets.utils.collate_g, num_workers=args.prefetch,
+                                               pin_memory=True)
+    test_loader = torch.utils.data.DataLoader(data_test, batch_size=args.batch_size,
+                                              collate_fn=datasets.utils.collate_g, num_workers=args.prefetch,
+                                              pin_memory=True)
 
     print('\tCreate model')
     model = MpnnIntNet([len(h_t[0]), len(list(e.values())[0])], [5, 15, 15], [10, 20, 20], num_classes,
