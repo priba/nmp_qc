@@ -182,8 +182,7 @@ class MessageFunction(nn.Module):
 
     def m_mpnn(self, h_v, h_w, e_vw, opt={}):
         # Matrices for each edge
-        edge_input = e_vw.contiguous().view(-1, e_vw.size(2))
-        edge_output = self.learn_modules[0](edge_input)
+        edge_output = self.learn_modules[0](e_vw)
         edge_output = edge_output.view(-1, self.args['out'], self.args['in'])
 
         h_w_rows = h_w[..., None].expand(h_w.size(0), h_v.size(1), h_w.size(1)).contiguous()
