@@ -47,10 +47,10 @@ parser = argparse.ArgumentParser(description='Neural message passing')
 
 parser.add_argument('--dataset', default='qm9', help='QM9')
 parser.add_argument('--datasetPath', default='../data/qm9/dsgdb9nsd/', help='dataset path')
-parser.add_argument('--logPath', default='../log/qm9/ggnn/', help='log path')
+parser.add_argument('--logPath', default='../log/qm9/mpnn/', help='log path')
 parser.add_argument('--plotLr', default=False, help='allow plotting the data')
-parser.add_argument('--plotPath', default='../plot/qm9/ggnn/', help='plot path')
-parser.add_argument('--resume', default='../checkpoint/qm9/ggnn/',
+parser.add_argument('--plotPath', default='../plot/qm9/mpnn/', help='plot path')
+parser.add_argument('--resume', default='../checkpoint/qm9/mpnn/',
                     help='path to latest checkpoint')
 # Optimization Options
 parser.add_argument('--batch-size', type=int, default=20, metavar='N',
