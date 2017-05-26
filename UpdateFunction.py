@@ -146,6 +146,12 @@ class UpdateFunction(nn.Module):
         return nn.ParameterList(learn_args), nn.ModuleList(learn_modules), args
 
     def u_mpnn(self, h_v, m_v, opt={}):
+        h_in = h_v.view(-1,h_v.size(2))
+        m_in = m_v.view(-1,m_v.size(2))
+        h_new = self.learn_modules[0](m_in[None,...],h_in[None,...])[0] # 0 or 1???
+        return torch.squeeze(h_new).view(h_v.size())
+
+    def u_mpnn1(self, h_v, m_v, opt={}):
         h_v.contiguous()
         m_v.contiguous()
         h_new = self.learn_modules[0](torch.transpose(m_v, 0, 1), torch.unsqueeze(h_v, 0))[0]  # 0 or 1???

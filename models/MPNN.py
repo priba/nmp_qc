@@ -57,24 +57,38 @@ class MPNN(nn.Module):
 
             h_t = Variable(torch.Tensor(h[0].size(0), h[0].size(1), h[0].size(2)).type_as(h_in.data).zero_())
 
+            e_aux = e.view(-1, e.size(2), e.size(3))
+            h_aux = h[t].view(-1, h[t].size(2))
+
+            m = self.m[0].forward(h[t], h_aux, e_aux)
+            m = m.view(h[0].size(0), h[0].size(1), -1, m.size(1))
+
+            # Nodes without edge set message to 0
+            m = torch.unsqueeze(g, 3).expand_as(m) * m
+
+            m = torch.squeeze(torch.sum(m, 2))
+
+            h_t = self.u[0].forward(h[t], m)
+
             # Apply one layer pass (Message + Update)
-            for v in range(0, h_in.size(1)):
-                m = self.m[0].forward(h[t][:, v, :], h[t], e[:, v, :])
-
-                # Nodes without edge set message to 0
-                m = g[:, v, :, None].expand_as(m) * m
-
-                m = torch.sum(m, 1)
-
-                # Update
-                h_t[:, v, :] = self.u[0].forward(h[t][:, v, :], m)
+            # for v in range(0, h_in.size(1)):
+            #     m = self.m[0].forward(h[t][:, v, :], h[t], e[:, v, :])
+            #
+            #     # Nodes without edge set message to 0
+            #     m = g[:, v, :, None].expand_as(m) * m
+            #
+            #     m = torch.sum(m, 1)
+            #
+            #     # Update
+            #     h_t[:, v, :] = self.u[0].forward(h[t][:, v, :], m)
 
             # Delete virtual nodes
             h_t = (torch.sum(h_in, 2).expand_as(h_t) > 0).type_as(h_t) * h_t
-            h.append(h_t.clone())
+            h.append(h_t)
 
         # Readout
         res = self.r.forward(h)
+
         if self.type == 'classification':
             res = nn.LogSoftmax()(res)
         return res
