@@ -53,7 +53,7 @@ parser.add_argument('--plotPath', default='../plot/qm9/ggnn/', help='plot path')
 parser.add_argument('--resume', default='../checkpoint/qm9/ggnn/',
                     help='path to latest checkpoint')
 # Optimization Options
-parser.add_argument('--batch-size', type=int, default=20, metavar='N',
+parser.add_argument('--batch-size', type=int, default=100, metavar='N',
                     help='Input batch size for training (default: 20)')
 parser.add_argument('--no-cuda', action='store_true', default=False,
                     help='Enables CUDA training')
