@@ -1,6 +1,6 @@
 # Neural Message Passing for Quantum Chemistry
 
-Implementation of different models of Neural Networks on graphs as explained in the article proposed by Gilber *et al.*[1].
+Implementation of different models of Neural Networks on graphs as explained in the article proposed by Gilmer *et al.* [1].
 
 ## Installation
 
