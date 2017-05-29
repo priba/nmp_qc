@@ -6,18 +6,15 @@ Implementation of Neural Message Passing as proposed by Justin Gilmer *et al.* i
 
     $ pip install -r requirements.txt
     $ python main.py
+    
+## Installation of rdkit
+
+Running any experiment using QM9 dataset needs installing the [rdkit](http://www.rdkit.org/) package, which can be done 
+following the instructions available [here](http://www.rdkit.org/docs/Install.html)
 
 ## Data
 
 The data used in this project can be downloaded [here](https://github.com/priba/nmp_qc/tree/master/data).
-## TODO
-
-- [x] Data downloader.
-- [ ] Main code structure.
-- [ ] Graph Loader: Graph reader for the common datasets.
-- [ ] Message function: Reproduce message functions for the state of the art papers.
-- [ ] Update function: Reproduce the node update functions.
-- [ ] Readout function: Reproduce readout functions.
 
 ## Bibliography
 

@@ -141,7 +141,7 @@ def main():
                                               num_workers=args.prefetch, pin_memory=True)
 
     print('\tCreate model')
-    model = MPNN([len(h_t[0]), len(list(e.values())[0])], 25, 15, 2, len(l), type='regression')
+    model = MPNN([len(h_t[0]), len(list(e.values())[0])], 73, 15, 2, len(l), type='regression')
 
     print('Optimizer')
     optimizer = optim.Adam(model.parameters(), lr=args.lr)
@@ -275,7 +275,7 @@ def train(train_loader, model, criterion, optimizer, epoch, evaluation, logger):
     logger.log_value('train_epoch_error_ratio', error_ratio.avg)
 
     print('Epoch: [{0}] Avg Error Ratio {err.avg:.3f}; Average Loss {loss.avg:.3f}; Avg Time x Batch {b_time.avg:.3f}'
-          .format(epoch, acc=error_ratio, loss=losses, b_time=batch_time))
+          .format(epoch, err=error_ratio, loss=losses, b_time=batch_time))
 
 
 def validate(val_loader, model, criterion, evaluation, logger=None):
