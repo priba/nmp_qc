@@ -88,10 +88,10 @@ This class implements the whole Gilmer et al. model following the functions Mess
 
 In progress..
 
-*[x] Edge Network
-*[ ] Virtual Graph Elements
-*[ ] set2set Readout function
-*[ ] Multiple Towers
+* [x] Edge Network
+* [ ] Virtual Graph Elements
+* [ ] set2set Readout function
+* [ ] Multiple Towers
 
 ``` 
 Parameters
