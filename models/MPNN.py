@@ -21,6 +21,8 @@ class MPNN(nn.Module):
 
         Parameters
         ----------
+        in_n : int list
+            Sizes for the node and edge features.
         hidden_state_size : int
             Size of the hidden states (the input will be padded with 0's to this size).
         message_size : int
