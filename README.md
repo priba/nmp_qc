@@ -25,10 +25,20 @@ The data used in this project can be downloaded [here](https://github.com/priba/
 - [5] Kipf *et al.*, [Semi-Supervised Classification with Graph Convolutional Networks](https://arxiv.org/abs/1609.02907), ICLR, 2017
 - [6] Defferrard *et al.*, [Convolutional Neural Networks on Graphs with Fast Localized Spectral Filtering](https://arxiv.org/abs/1606.09375), NIPS, 2016. 
 - [7] Kearnes *et al.*, [Molecular Graph Convolutions: Moving Beyond Fingerprints](https://arxiv.org/abs/1603.00856), JCAMD, 2016. 
-- [8] Bruna *et al.*, [Spectral Networks and Locally Connected Networks on Graphs](https://arxiv.org/abs/1312.6203), ICLR, 2014. 
-
+- [8] Bruna *et al.*, [Spectral Networks and Locally Connected Networks on Graphs](https://arxiv.org/abs/1312.6203), ICLR, 2014.
+ 
+ ## Cite
+ 
+```
+@Article{Gilmer2017,
+  author  = {Justin Gilmer and Samuel S. Schoenholz and Patrick F. Riley and Oriol Vinyals and George E. Dahl},
+  title   = {Neural Message Passing for Quantum Chemistry},
+  journal = {CoRR},
+  year    = {2017}
+}
+```
 
 ## Authors
 
-* Pau Riba (@priba)
-* Anjan Dutta (@AnjanDutta)
+* Pau Riba (@priba) [Webpage](http://www.cvc.uab.es/people/priba/)
+* Anjan Dutta (@AnjanDutta) [Webpage](https://sites.google.com/site/2adutta/)
