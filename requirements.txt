@@ -3,3 +3,5 @@ torchvision
 numpy
 wget
 networkx
+joblib
+tensorboard

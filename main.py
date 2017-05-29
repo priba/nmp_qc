@@ -19,13 +19,9 @@ from torch.autograd import Variable
 import time
 import argparse
 import os
-import sys
 import numpy as np
 
 # Our Modules
-reader_folder = os.path.realpath(os.path.abspath('..'))
-if reader_folder not in sys.path:
-    sys.path.append(reader_folder)
 import datasets
 from datasets import utils
 from models.MPNN import MPNN
