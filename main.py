@@ -46,11 +46,11 @@ def restricted_float(x, inter):
 parser = argparse.ArgumentParser(description='Neural message passing')
 
 parser.add_argument('--dataset', default='qm9', help='QM9')
-parser.add_argument('--datasetPath', default='../data/qm9/dsgdb9nsd/', help='dataset path')
-parser.add_argument('--logPath', default='../log/qm9/mpnn/', help='log path')
+parser.add_argument('--datasetPath', default='./data/qm9/dsgdb9nsd/', help='dataset path')
+parser.add_argument('--logPath', default='./log/qm9/mpnn/', help='log path')
 parser.add_argument('--plotLr', default=False, help='allow plotting the data')
-parser.add_argument('--plotPath', default='../plot/qm9/mpnn/', help='plot path')
-parser.add_argument('--resume', default='../checkpoint/qm9/mpnn/',
+parser.add_argument('--plotPath', default='./plot/qm9/mpnn/', help='plot path')
+parser.add_argument('--resume', default='./checkpoint/qm9/mpnn/',
                     help='path to latest checkpoint')
 # Optimization Options
 parser.add_argument('--batch-size', type=int, default=100, metavar='N',
@@ -97,9 +97,9 @@ def main():
     test_ids = [files[i] for i in idx[10000:20000]]
     train_ids = [files[i] for i in idx[20000:]]
 
-    data_train = datasets.Qm9(root, train_ids, edge_transform=lambda g: utils.qm9_edges(g, e_representation='raw_distance'))
-    data_valid = datasets.Qm9(root, valid_ids, edge_transform=lambda g: utils.qm9_edges(g, e_representation='raw_distance'))
-    data_test = datasets.Qm9(root, test_ids, edge_transform=lambda g: utils.qm9_edges(g, e_representation='raw_distance'))
+    data_train = datasets.Qm9(root, train_ids, edge_transform=utils.qm9_edges, e_representation='raw_distance')
+    data_valid = datasets.Qm9(root, valid_ids, edge_transform=utils.qm9_edges, e_representation='raw_distance')
+    data_test = datasets.Qm9(root, test_ids, edge_transform=utils.qm9_edges, e_representation='raw_distance')
 
     # Define model and optimizer
     print('Define model')

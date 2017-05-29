@@ -48,7 +48,7 @@ def qm9_nodes(g, hydrogen=False):
     return h
 
 
-def qm9_edges(g, e_representation='chem_graph'):
+def qm9_edges(g, e_representation='raw_distance'):
     remove_edges = []
     e={}    
     for n1, n2, d in g.edges_iter(data=True):

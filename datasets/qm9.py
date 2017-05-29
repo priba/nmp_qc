@@ -33,12 +33,13 @@ class Qm9(data.Dataset):
 
     # Constructor
     def __init__(self, root_path, ids, vertex_transform=utils.qm9_nodes, edge_transform=utils.qm9_edges,
-                 target_transform=None):
+                 target_transform=None, e_representation='raw_distance'):
         self.root = root_path
         self.ids = ids
         self.vertex_transform = vertex_transform
         self.edge_transform = edge_transform
         self.target_transform = target_transform
+        self.e_representation = e_representation
 
     def __getitem__(self, index):
         g, target = xyz_graph_reader(os.path.join(self.root, self.ids[index]))
@@ -46,7 +47,7 @@ class Qm9(data.Dataset):
             h = self.vertex_transform(g)
 
         if self.edge_transform is not None:
-            g, e = self.edge_transform(g)
+            g, e = self.edge_transform(g, self.e_representation)
 
         if self.target_transform is not None:
             target = self.target_transform(target)
