@@ -15,14 +15,32 @@ __email__ = "priba@cvc.uab.cat, adutta@cvc.uab.cat"
 
 class MpnnGGNN(nn.Module):
     """
-        in_n (size_v, size_e)
+        MPNN as proposed by Li et al..
+
+        This class implements the whole Li et al. model following the functions proposed by Gilmer et al. as
+        Message, Update and Readout.
+
+        Parameters
+        ----------
+        e : int list.
+            Possible edge labels for the input graph.
+        hidden_state_size : int
+            Size of the hidden states (the input will be padded with 0's to this size).
+        message_size : int
+            Message function output vector size.
+        n_layers : int
+            Number of iterations Message+Update (weight tying).
+        l_target : int
+            Size of the output.
+        type : str (Optional)
+            Classification | [Regression (default)]. If classification, LogSoftmax layer is applied to the output vector.
     """
 
-    def __init__(self, d, in_n, hidden_state_size, message_size, n_layers, l_target, type='regression'):
+    def __init__(self, e, hidden_state_size, message_size, n_layers, l_target, type='regression'):
         super(MpnnGGNN, self).__init__()
 
         # Define message
-        self.m = nn.ModuleList([MessageFunction('ggnn', args={'e_label': d, 'in': hidden_state_size, 'out': message_size})])
+        self.m = nn.ModuleList([MessageFunction('ggnn', args={'e_label': e, 'in': hidden_state_size, 'out': message_size})])
 
         # Define Update
         self.u = nn.ModuleList([UpdateFunction('ggnn',

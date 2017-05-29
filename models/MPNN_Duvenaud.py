@@ -15,8 +15,27 @@ __email__ = "priba@cvc.uab.cat, adutta@cvc.uab.cat"
 
 class MpnnDuvenaud(nn.Module):
     """
-    in_n (size_v, size_e)
+        MPNN as proposed by Duvenaud et al..
+
+        This class implements the whole Duvenaud et al. model following the functions proposed by Gilmer et al. as 
+        Message, Update and Readout.
+
+        Parameters
+        ----------
+        d : int list.
+            Possible degrees for the input graph.
+        in_n : int list
+            Sizes for the node and edge features.
+        out_update : int list
+            Output sizes for the different Update functions.
+        hidden_state_readout : int
+            Input size for the neural net used inside the readout function.
+        l_target : int
+            Size of the output.
+        type : str (Optional)
+            Classification | [Regression (default)]. If classification, LogSoftmax layer is applied to the output vector.
     """
+
     def __init__(self, d, in_n, out_update, hidden_state_readout, l_target, type='regression'):
         super(MpnnDuvenaud, self).__init__()
 

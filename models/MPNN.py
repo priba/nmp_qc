@@ -15,7 +15,22 @@ __email__ = "priba@cvc.uab.cat, adutta@cvc.uab.cat"
 
 class MPNN(nn.Module):
     """
-    in_n (size_v, size_e)
+        MPNN as proposed by Gilmer et al..
+
+        This class implements the whole Gilmer et al. model following the functions Message, Update and Readout.
+
+        Parameters
+        ----------
+        hidden_state_size : int
+            Size of the hidden states (the input will be padded with 0's to this size).
+        message_size : int
+            Message function output vector size.
+        n_layers : int
+            Number of iterations Message+Update (weight tying).
+        l_target : int
+            Size of the output.
+        type : str (Optional)
+            Classification | [Regression (default)]. If classification, LogSoftmax layer is applied to the output vector.
     """
 
     def __init__(self, in_n, hidden_state_size, message_size, n_layers, l_target, type='regression'):

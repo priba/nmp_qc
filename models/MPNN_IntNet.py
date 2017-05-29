@@ -15,8 +15,25 @@ __email__ = "priba@cvc.uab.cat, adutta@cvc.uab.cat"
 
 class MpnnIntNet(nn.Module):
     """
-    in_n (size_v, size_e)
+        MPNN as proposed by Battaglia et al..
+
+        This class implements the whole Battaglia et al. model following the functions proposed by Gilmer et al. as
+        Message, Update and Readout.
+
+        Parameters
+        ----------
+        in_n : int list
+            Sizes for the node and edge features.
+        out_message : int list
+            Output sizes for the different Message functions.
+        out_update : int list
+            Output sizes for the different Update functions.
+        l_target : int
+            Size of the output.
+        type : str (Optional)
+            Classification | [Regression (default)]. If classification, LogSoftmax layer is applied to the output vector.
     """
+
     def __init__(self, in_n, out_message, out_update, l_target, type='regression'):
         super(MpnnIntNet, self).__init__()
 

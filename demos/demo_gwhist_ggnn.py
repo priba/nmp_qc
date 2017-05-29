@@ -129,7 +129,7 @@ def main():
                                               num_workers=args.prefetch, pin_memory=True)
 
     print('\tCreate model')
-    model = MpnnGGNN(stat_dict['edge_labels'], [len(h_t[0]), len(list(e.values())[0])], 25, 15, 2, num_classes, type='classification')
+    model = MpnnGGNN(stat_dict['edge_labels'], 25, 15, 2, num_classes, type='classification')
 
     print('Optimizer')
     optimizer = optim.Adam(model.parameters(), lr=args.lr)

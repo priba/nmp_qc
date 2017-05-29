@@ -141,7 +141,7 @@ def main():
                                               num_workers=args.prefetch, pin_memory=True)
 
     print('\tCreate model')
-    model = MpnnGGNN(stat_dict['edge_labels'], [len(h_t[0]), len(list(e.values())[0])], 25, 15, 2, len(l),
+    model = MpnnGGNN(stat_dict['edge_labels'], 25, 15, 2, len(l),
                      type='regression')
 
     print('Optimizer')
